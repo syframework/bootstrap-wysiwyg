@@ -1,12 +1,17 @@
 # sy/bootstrap-wysiwyg
 
-Shared WYSIWYG engine for the `sy/bootstrap-*` plugins: a CKEditor 4 wrapper
-with one PHP component, one JS module, and no application knowledge.
+Shared WYSIWYG engine and CKEditor backend for the `sy/bootstrap-*` plugins.
+
+The package owns the browser engine, the PHP component, the `/editor`
+browse/upload backend, CKEditor asset locations and the upload extension
+policy. It depends on `sy/bootstrap` for the generic API, upload and image
+helpers; `sy/bootstrap` never depends on this package.
 
 ## Requirements
 
 - PHP >= 8.1
 - `ext-json`
+- `sy/bootstrap ^2.0`
 
 CKEditor 4 itself is loaded from a CDN by default (`https://cdn.ckeditor.com`),
 so the browser needs network access unless a project sets `CKEDITOR_JS`.
@@ -20,8 +25,8 @@ composer require sy/bootstrap-wysiwyg
 ## Usage
 
 ```php
-use Sy\Bootstrap\Lib\EditorAssets;
 use Sy\Bootstrap\Wysiwyg\Editor;
+use Sy\Bootstrap\Wysiwyg\Lib\EditorAssets;
 
 $editor = new Editor([
     'element-id' => 'article-content',
@@ -53,8 +58,9 @@ The component renders the container, loads `assets.ckeditor-js` then
 SyWysiwyg.create(document.getElementById("article-content"), { … });
 ```
 
-`EditorAssets` lives in `sy/bootstrap`: the engine never guesses a URL from
-`WEB_ROOT`.
+`EditorAssets` lives in this package: the engine never guesses a URL from
+`WEB_ROOT`. The component still requires explicit `assets.*` options, so a
+project can use a CDN or rename its build.
 
 ### Options
 
@@ -118,10 +124,38 @@ destroy() clears timers and listeners -> destroyed (idempotent)
 - `wysiwyg:stopped` is an end-of-editing event, not a re-render: a consumer
   whose stored HTML differs from its rendered HTML reloads the page.
 
+## CKEditor backend
+
+`Sy\Bootstrap\Wysiwyg\Application\Editor` serves the `/editor` browse and
+upload actions. A compatibility class `Sy\Bootstrap\Application\Editor`
+extends it, so bootstrap's `Application::controllerClass()` still resolves the
+route without knowing this package. Plugin classes stay in the consuming
+packages (`Sy\Bootstrap\Application\Editor\Article`, `...\Content`, `...\Place`)
+and use `Sy\Bootstrap\Wysiwyg\Application\Editor\CkFile`.
+
+## Upload extensions
+
+`Sy\Bootstrap\Wysiwyg\Lib\UploadPolicy` owns the server-side whitelist. The
+package defaults live in `UploadPolicy::DEFAULT`; a project can override them
+with `WYSIWYG_UPLOAD_EXTENSIONS`, globally or per editor:
+
+```php
+define('WYSIWYG_UPLOAD_EXTENSIONS', [
+    'image' => ['jpg', 'jpeg', 'png', 'webp'],
+    'article' => ['image' => ['jpg', 'jpeg', 'png', 'webp', 'avif']],
+    'content' => ['image' => ['jpg', 'png']],
+    'place' => ['image' => ['jpg', 'jpeg', 'png'], 'file' => ['pdf']],
+]);
+```
+
+The `article`, `content` and `place` keys are editor types, not record ids.
+Executable extensions (`php`, `html`, `svg`, `js`, ...) are always rejected.
+Validation is server-side; CKEditor is not trusted.
+
 ## Tests
 
 ```
-composer test    # PHP: option validation and component rendering
+composer test    # PHP: engine, backend, upload policy and component rendering
 npm test         # JS: engine, on jsdom with a CKEditor stub (npm install first)
 ```
 
