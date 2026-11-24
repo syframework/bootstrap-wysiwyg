@@ -1,5 +1,5 @@
 <?php
-namespace Sy\Bootstrap\Wysiwyg\Application\Editor;
+namespace Sy\Bootstrap\Application\Editor;
 
 use Sy\Bootstrap\Lib\Image;
 use Sy\Bootstrap\Lib\Str;

@@ -19,11 +19,8 @@
 	],
 	"autoload": {
 		"psr-4": {
-			"Sy\\Bootstrap\\Wysiwyg\\": "src/"
-		},
-		"classmap": [
-			"src/Compat/Editor.php"
-		]
+			"Sy\\Bootstrap\\": "src/"
+		}
 	},
 	"require-dev": {
 		"phpunit/phpunit": "^10"

@@ -1,5 +1,5 @@
 <?php
-namespace Sy\Bootstrap\Wysiwyg\Application;
+namespace Sy\Bootstrap\Application;
 
 /**
  * CKEditor backend controller (`/editor`).

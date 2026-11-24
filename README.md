@@ -126,12 +126,12 @@ destroy() clears timers and listeners -> destroyed (idempotent)
 
 ## CKEditor backend
 
-`Sy\Bootstrap\Wysiwyg\Application\Editor` serves the `/editor` browse and
-upload actions. A compatibility class `Sy\Bootstrap\Application\Editor`
-extends it, so bootstrap's `Application::controllerClass()` still resolves the
-route without knowing this package. Plugin classes stay in the consuming
-packages (`Sy\Bootstrap\Application\Editor\Article`, `...\Content`, `...\Place`)
-and use `Sy\Bootstrap\Wysiwyg\Application\Editor\CkFile`.
+`Sy\Bootstrap\Application\Editor` serves the `/editor` browse and upload
+actions. The class lives in this package, so bootstrap's
+`Application::controllerClass()` resolves the route without knowing where the
+backend is implemented. Plugin classes stay in the consuming packages
+(`Sy\Bootstrap\Application\Editor\Article`, `...\Content`, `...\Place`) and use
+the `CkFile` trait from the same namespace.
 
 ## Upload extensions
 

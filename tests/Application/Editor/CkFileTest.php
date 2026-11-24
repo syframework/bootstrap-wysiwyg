@@ -16,7 +16,7 @@ if (!defined('UPLOAD_ROOT')) {
  */
 class CkFileHarness {
 
-	use \Sy\Bootstrap\Wysiwyg\Application\Editor\CkFile;
+	use \Sy\Bootstrap\Application\Editor\CkFile;
 
 	public $action = 'Article';
 

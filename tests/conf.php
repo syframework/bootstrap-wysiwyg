@@ -35,6 +35,4 @@ if (!defined('UPLOAD_ROOT')) {
 	define('UPLOAD_ROOT', '/upload');
 }
 
-// Composer's classmap does this in production; require it explicitly while
-// this checkout still uses the previous vendor autoload map.
-require_once __DIR__ . '/../src/Compat/Editor.php';
+
