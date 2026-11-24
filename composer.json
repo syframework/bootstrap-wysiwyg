@@ -4,7 +4,9 @@
 	"type": "library",
 	"require": {
 		"php": ">=8.1",
+		"ext-dom": "*",
 		"ext-json": "*",
+		"masterminds/html5": "^2.8",
 		"sy/bootstrap": "^2.0",
 		"sy/webcomponent": "^2"
 	},

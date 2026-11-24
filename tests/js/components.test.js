@@ -26,7 +26,7 @@ async function startWith(overrides, element = mount()) {
 describe('registerPlugins', () => {
 	it('registers only the enabled sy* plugins, from assets.plugins', async () => {
 		await startWith({
-			components: {enabled: true, allowlist: ['MAP'], attribute: 'data-sycomponent', reportOnly: false},
+			components: {enabled: true, allowlist: ['MAP'], reportOnly: false},
 			extraPlugins: ['sycomponent', 'sytranslate', 'tableresize'],
 			assets: {
 				engine: '/assets/js/wysiwyg.js',
@@ -44,7 +44,7 @@ describe('registerPlugins', () => {
 
 	it('registers nothing when components are disabled', async () => {
 		await startWith({
-			components: {enabled: false, allowlist: [], attribute: 'data-sycomponent', reportOnly: false},
+			components: {enabled: false, allowlist: [], reportOnly: false},
 			extraPlugins: ['sycomponent'],
 		});
 

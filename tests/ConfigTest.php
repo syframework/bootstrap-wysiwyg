@@ -49,7 +49,6 @@ class ConfigTest extends TestCase {
 		$this->assertSame([], $config['removePlugins']);
 		$this->assertTrue($config['guardUnload']);
 		$this->assertFalse($config['components']['enabled']);
-		$this->assertSame('data-sycomponent', $config['components']['attribute']);
 		$this->assertFalse($config['components']['reportOnly']);
 		$this->assertSame(['interval' => 0, 'onBlur' => false, 'onDialogClose' => false], $config['autosave']);
 		$this->assertSame('same-origin', $config['request']['credentials']);
@@ -221,14 +220,12 @@ class ConfigTest extends TestCase {
 			'components' => [
 				'enabled'     => true,
 				'allowlist'   => ['Sy\Bootstrap\Component\Place\Map'],
-				'attribute'   => 'data-component',
 				'report-only' => true,
 			],
 		]))->toArray();
 
 		$this->assertTrue($config['components']['enabled']);
 		$this->assertSame(['Sy\Bootstrap\Component\Place\Map'], $config['components']['allowlist']);
-		$this->assertSame('data-component', $config['components']['attribute']);
 		$this->assertTrue($config['components']['reportOnly']);
 	}
 

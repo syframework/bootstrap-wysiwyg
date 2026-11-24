@@ -12,6 +12,15 @@ spl_autoload_register(function ($class) {
 	if (is_file($file)) require $file;
 });
 
+spl_autoload_register(function ($class) {
+	$prefix = 'Masterminds\\';
+	if (strncmp($class, $prefix, strlen($prefix)) !== 0) return;
+
+	$relative = substr($class, strlen($prefix));
+	$file = __DIR__ . '/../../bootstrap/vendor/masterminds/html5/src/' . str_replace('\\', '/', $relative) . '.php';
+	if (is_file($file)) require $file;
+});
+
 define('WEB_ROOT', '/webroot');
 define('CONTROLLER_TRIGGER', 'controller');
 define('ACTION_TRIGGER', 'action');
