@@ -382,13 +382,9 @@ class Config {
 	 * @return array
 	 */
 	private static function components(array $raw) {
-		$attribute = self::string($raw, 'components.attribute', 'data-sycomponent');
-		if ($attribute === '') throw new InvalidArgumentException('components.attribute must not be empty');
-
 		return [
 			'enabled'    => self::bool($raw, 'components.enabled', false),
 			'allowlist'  => self::stringList($raw, 'components.allowlist', []),
-			'attribute'  => $attribute,
 			'reportOnly' => self::bool($raw, 'components.report-only', false),
 		];
 	}

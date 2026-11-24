@@ -1,10 +1,13 @@
 {
 	"name": "sy/bootstrap-wysiwyg",
-	"description": "Shared WYSIWYG engine (CKEditor 4 wrapper) for the sy/bootstrap plugins",
+	"description": "Shared WYSIWYG engine and CKEditor backend for the sy/bootstrap plugins",
 	"type": "library",
 	"require": {
 		"php": ">=8.1",
+		"ext-dom": "*",
 		"ext-json": "*",
+		"masterminds/html5": "^2.8",
+		"sy/bootstrap": "^2.0",
 		"sy/webcomponent": "^2"
 	},
 	"license": "MIT",
@@ -16,7 +19,7 @@
 	],
 	"autoload": {
 		"psr-4": {
-			"Sy\\Bootstrap\\Wysiwyg\\": "src/"
+			"Sy\\Bootstrap\\": "src/"
 		}
 	},
 	"require-dev": {
