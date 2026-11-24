@@ -419,6 +419,7 @@
 	 * ------------------------------------------------------------------ */
 
 	var dirtyInstances = [];
+	var instances = {};
 	var unloadBound = false;
 
 	function onBeforeUnload(event) {
@@ -828,6 +829,7 @@
 				destroyed = true;
 				emit('destroyed', {elementId: id});
 			}
+			if (id && instances[id] === instance) delete instances[id];
 			return hadEditor;
 		}
 
@@ -851,11 +853,15 @@
 			getLastSaved: function () { return lastSaved; }
 		};
 
+		if (id) instances[id] = instance;
+
 		return instance;
 	}
 
 	global.SyWysiwyg = {
 		create: create,
+		get: function (id) { return instances[id] || null; },
+		instances: instances,
 		version: VERSION
 	};
 })(window);

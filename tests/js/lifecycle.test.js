@@ -152,6 +152,19 @@ describe('stop', () => {
 });
 
 describe('destroy', () => {
+	it('registers and unregisters the instance by element id', async () => {
+		const element = mount('article-content', '<p>page</p>');
+		const instance = createInstance(element, {}, {net: createNet({})});
+
+		expect(window.SyWysiwyg.get('article-content')).toBe(instance);
+
+		await instance.start();
+		await flush();
+		instance.destroy();
+
+		expect(window.SyWysiwyg.get('article-content')).toBeNull();
+	});
+
 	it('is idempotent and emits wysiwyg:destroyed once', async () => {
 		const element = mount('article-content', '<p>page</p>');
 		const instance = createInstance(element, {}, {net: createNet({})});
