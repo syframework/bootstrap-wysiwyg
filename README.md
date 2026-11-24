@@ -3,14 +3,17 @@
 Shared WYSIWYG engine and CKEditor backend for the `sy/bootstrap-*` plugins.
 
 The package owns the browser engine, the PHP component, the `/editor`
-browse/upload backend, CKEditor asset locations and the upload extension
-policy. It depends on `sy/bootstrap` for the generic API, upload and image
-helpers; `sy/bootstrap` never depends on this package.
+browse/upload backend, CKEditor asset locations, the upload extension policy
+and the server-side component filter. It depends on `sy/bootstrap` for the
+generic API, upload and image helpers; `sy/bootstrap` never depends on this
+package.
 
 ## Requirements
 
 - PHP >= 8.1
+- `ext-dom`
 - `ext-json`
+- `masterminds/html5 ^2.8`
 - `sy/bootstrap ^2.0`
 
 CKEditor 4 itself is loaded from a CDN by default (`https://cdn.ckeditor.com`),
@@ -61,6 +64,12 @@ SyWysiwyg.create(document.getElementById("article-content"), { … });
 `EditorAssets` lives in this package: the engine never guesses a URL from
 `WEB_ROOT`. The component still requires explicit `assets.*` options, so a
 project can use a CDN or rename its build.
+
+### Instance registry
+
+`SyWysiwyg.get(elementId)` returns the instance created for that container, or
+`null` after `destroy()`. Consumer adapters use it to drive their own
+start/stop buttons without creating a second editor.
 
 ### Options
 
@@ -132,6 +141,14 @@ actions. The class lives in this package, so bootstrap's
 backend is implemented. Plugin classes stay in the consuming packages
 (`Sy\Bootstrap\Application\Editor\Article`, `...\Content`, `...\Place`) and use
 the `CkFile` trait from the same namespace.
+
+## Component filtering
+
+`Sy\Bootstrap\Wysiwyg\Lib\ComponentFilter` neutralizes the server-side
+components (`data-sycomponent`) that are not in the consumer allowlist. It is
+not an HTML sanitizer: run `Sy\Bootstrap\Lib\HtmlSanitizer` first on untrusted
+input. An empty allowlist denies every component, which is what Article uses;
+CMS and Place pass their own class or slot allowlists.
 
 ## Upload extensions
 
