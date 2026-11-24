@@ -147,8 +147,23 @@ the `CkFile` trait from the same namespace.
 `Sy\Bootstrap\Wysiwyg\Lib\ComponentFilter` neutralizes the server-side
 components (`data-sycomponent`) that are not in the consumer allowlist. It is
 not an HTML sanitizer: run `Sy\Bootstrap\Lib\HtmlSanitizer` first on untrusted
-input. An empty allowlist denies every component, which is what Article uses;
-CMS and Place pass their own class or slot allowlists.
+input. An empty allowlist denies every component; Article's default is empty,
+so a project must opt in explicitly.
+
+A project adds its own components with `WYSIWYG_COMPONENT_ALLOWLIST`, keyed by
+editor type:
+
+```php
+define('WYSIWYG_COMPONENT_ALLOWLIST', [
+    'article' => ['Project\\Component\\Article\\Map'],
+    'content' => ['Project\\Component\\Cms\\Widget'],
+    'place'   => ['MAP'],
+]);
+```
+
+`ComponentFilter::allowlist($editor, $default)` merges these entries with the
+consumer default; an absent or invalid entry keeps the default. The package
+default is never removed, so the security baseline remains.
 
 ## Upload extensions
 

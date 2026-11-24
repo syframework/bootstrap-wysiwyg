@@ -53,6 +53,43 @@ class ComponentFilter {
 	}
 
 	/**
+	 * Resolve the allowlist for an editor.
+	 *
+	 * A project can add its own components with the WYSIWYG_COMPONENT_ALLOWLIST
+	 * constant, keyed by editor type (article, content, place):
+	 *
+	 *   define('WYSIWYG_COMPONENT_ALLOWLIST', [
+	 *       'article' => ['Project\\Component\\Article\\Map'],
+	 *   ]);
+	 *
+	 * The package default is always kept; project entries are additive. This
+	 * keeps the security baseline while letting the final project authorize its
+	 * own components. An absent or invalid entry falls back to the default.
+	 *
+	 * @param string $editor  Editor type: article, content or place
+	 * @param array  $default Package default allowlist
+	 * @return array
+	 */
+	public static function allowlist(string $editor, array $default = []): array {
+		$map = defined('WYSIWYG_COMPONENT_ALLOWLIST') ? WYSIWYG_COMPONENT_ALLOWLIST : [];
+		$configured = [];
+
+		if (is_array($map) and isset($map[$editor]) and is_array($map[$editor])) {
+			$configured = $map[$editor];
+		}
+
+		$list = array_merge($default, $configured);
+		$list = array_map(function ($class) {
+			return trim((string) $class);
+		}, $list);
+		$list = array_filter($list, function ($class) {
+			return $class !== '';
+		});
+
+		return array_values(array_unique($list));
+	}
+
+	/**
 	 * Depth-first list of elements, children included.
 	 *
 	 * DOMDocumentFragment has no getElementsByTagName(), and a live NodeList

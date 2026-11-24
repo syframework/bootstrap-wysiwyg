@@ -1,6 +1,7 @@
 <?php
 namespace Sy\Test\Lib;
 
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use Sy\Bootstrap\Wysiwyg\Lib\ComponentFilter;
 
@@ -16,6 +17,27 @@ class ComponentFilterTest extends TestCase {
 	protected function tearDown(): void {
 		ini_set('error_log', '');
 		if (is_file($this->logFile)) unlink($this->logFile);
+	}
+
+	#[RunInSeparateProcess]
+	public function testArticleAllowlistIsEmptyWithoutProjectConfiguration() {
+		$this->assertSame([], ComponentFilter::allowlist('article'));
+	}
+
+	public function testProjectAllowlistIsMergedWithDefaults() {
+		if (!defined('WYSIWYG_COMPONENT_ALLOWLIST')) {
+			define('WYSIWYG_COMPONENT_ALLOWLIST', [
+				'article' => [' Project\\Component\\Foo ', '', 'Project\\Component\\Foo'],
+				'invalid' => 'not-an-array',
+			]);
+		}
+
+		$this->assertSame(
+			['A\\B', 'Project\\Component\\Foo'],
+			ComponentFilter::allowlist('article', ['A\\B'])
+		);
+		$this->assertSame(['C\\D'], ComponentFilter::allowlist('missing', ['C\\D']));
+		$this->assertSame([], ComponentFilter::allowlist('invalid', []));
 	}
 
 	public function testEmptyInput() {
