@@ -62,6 +62,12 @@ SyWysiwyg.create(document.getElementById("article-content"), { … });
 `WEB_ROOT`. The component still requires explicit `assets.*` options, so a
 project can use a CDN or rename its build.
 
+### Instance registry
+
+`SyWysiwyg.get(elementId)` returns the instance created for that container, or
+`null` after `destroy()`. Consumer adapters use it to drive their own
+start/stop buttons without creating a second editor.
+
 ### Options
 
 | Option | Type | Default | Role |
