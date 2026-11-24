@@ -88,6 +88,13 @@ class EditorTest extends TestCase {
 		);
 	}
 
+	public function testCreateWaitsForTheDeferredEngine() {
+		$code = $this->jsCode($this->editor());
+
+		$this->assertStringContainsString('DOMContentLoaded', $code);
+		$this->assertStringContainsString('typeof SyWysiwyg', $code);
+	}
+
 	public function testCreateCallCarriesTheIdAndTheOptions() {
 		$code = $this->jsCode($this->editor(['save-data' => ['id' => 12, 'lang' => 'fr']]));
 

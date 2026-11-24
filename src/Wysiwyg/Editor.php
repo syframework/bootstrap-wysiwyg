@@ -37,8 +37,28 @@ class Editor extends WebComponent {
 		// inline call below runs after the two files are parsed and executed.
 		$this->addJsLink($this->config->asset('ckeditorJs'), ['position' => self::JS_BOTTOM]);
 		$this->addJsLink($this->config->asset('engine'), ['position' => self::JS_BOTTOM]);
+
+		// addJsLink() emits `defer` scripts: the inline call must wait for
+		// DOMContentLoaded, otherwise it runs before the engine defines the
+		// SyWysiwyg global. The guard turns a missing asset into a readable
+		// console error instead of an uncaught ReferenceError.
+		$id      = json_encode($this->config->id());
+		$options = $this->config->json();
 		$this->addJsCode(
-			'SyWysiwyg.create(document.getElementById(' . json_encode($this->config->id()) . '), ' . $this->config->json() . ');',
+			'(function () {'
+			. ' function create() {'
+			. '  if (typeof SyWysiwyg === "undefined") {'
+			. '   console.error("SyWysiwyg engine is not loaded: check assets.engine");'
+			. '   return;'
+			. '  }'
+			. '  SyWysiwyg.create(document.getElementById(' . $id . '), ' . $options . ');'
+			. ' }'
+			. ' if (document.readyState === "loading") {'
+			. '  document.addEventListener("DOMContentLoaded", create);'
+			. ' } else {'
+			. '  create();'
+			. ' }'
+			. '})();',
 			['position' => self::JS_BOTTOM, 'type' => '']
 		);
 	}
