@@ -90,15 +90,39 @@ All events are dispatched on `document`, with `elementId` in the detail (never
 `id`, which is the business identity carried by `save-data`):
 
 `wysiwyg:ready`, `wysiwyg:start`, `wysiwyg:change`, `wysiwyg:save`,
-`wysiwyg:saved`, `wysiwyg:stopped`, `wysiwyg:error`.
+`wysiwyg:saved`, `wysiwyg:error`, `wysiwyg:stopped`, `wysiwyg:destroyed`.
 
+`wysiwyg:ready` is the only extension point for CKEditor customisation
+(`dataProcessor.writer`, `insertElement`, dialogs): listeners must filter on
+`detail.elementId`, because several editors can live on the same page.
 `wysiwyg:save` carries a mutable `detail.content`: a listener may replace it
 before the POST.
+
+## Engine lifecycle
+
+```text
+start()   GET load-url (optional) -> CKEDITOR.inline|replace -> ready -> start
+save()    POST save-url {content, csrf, ...save-data} -> saved | error
+stop()    save when dirty, then restore and destroy -> stopped
+destroy() clears timers and listeners -> destroyed (idempotent)
+```
+
+- the body is always `content`, `csrf`, then `save-data`: the engine adds no
+  `id`, business identity travels through `save-data`;
+- `lastSaved` is an object `{content: string}` or `null`, never a string, and
+  `stop()` restores `lastSaved.content`, then the pre-load HTML, then
+  `editor.getData()` — in that order, never `undefined`;
+- a `status: "ko"` response carrying a fresh `csrf` is replayed exactly once;
+  4xx (400/403/404/413) are fatal (restore + destroy), network errors, 429 and
+  5xx stay retryable;
+- `wysiwyg:stopped` is an end-of-editing event, not a re-render: a consumer
+  whose stored HTML differs from its rendered HTML reloads the page.
 
 ## Tests
 
 ```
-composer test
+composer test    # PHP: option validation and component rendering
+npm test         # JS: engine, on jsdom with a CKEditor stub (npm install first)
 ```
 
 ## License
