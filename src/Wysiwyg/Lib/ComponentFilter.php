@@ -33,6 +33,7 @@ class ComponentFilter {
 	 */
 	public static function sanitize($html, array $allowlist) {
 		if (!is_string($html) or $html === '') return '';
+		$allowlist = self::normalizeList($allowlist);
 
 		$html5 = new HTML5();
 		$fragment = $html5->loadHTMLFragment($html);
@@ -78,10 +79,26 @@ class ComponentFilter {
 			$configured = $map[$editor];
 		}
 
-		$list = array_merge($default, $configured);
-		$list = array_map(function ($class) {
-			return trim((string) $class);
-		}, $list);
+		return self::normalizeList(array_merge($default, $configured));
+	}
+
+	/**
+	 * Normalize a component class: trim and drop the optional leading `\`.
+	 * `data-sycomponent="\Foo\Bar"` and `Foo\Bar::class` must match.
+	 *
+	 * @param mixed $class
+	 * @return string
+	 */
+	private static function normalizeClass($class): string {
+		return ltrim(trim((string) $class), '\\');
+	}
+
+	/**
+	 * @param array $list
+	 * @return array
+	 */
+	private static function normalizeList(array $list): array {
+		$list = array_map([self::class, 'normalizeClass'], $list);
 		$list = array_filter($list, function ($class) {
 			return $class !== '';
 		});
@@ -118,7 +135,7 @@ class ComponentFilter {
 	 * @return string|null
 	 */
 	private static function resolveClass($element) {
-		$class = trim($element->getAttribute(self::MARKER));
+		$class = self::normalizeClass($element->getAttribute(self::MARKER));
 		return $class !== '' ? $class : null;
 	}
 

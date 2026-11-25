@@ -27,14 +27,14 @@ class ComponentFilterTest extends TestCase {
 	public function testProjectAllowlistIsMergedWithDefaults() {
 		if (!defined('WYSIWYG_COMPONENT_ALLOWLIST')) {
 			define('WYSIWYG_COMPONENT_ALLOWLIST', [
-				'article' => [' Project\\Component\\Foo ', '', 'Project\\Component\\Foo'],
+				'article' => [' \\Project\\Component\\Foo ', '', '\\Project\\Component\\Foo'],
 				'invalid' => 'not-an-array',
 			]);
 		}
 
 		$this->assertSame(
 			['A\\B', 'Project\\Component\\Foo'],
-			ComponentFilter::allowlist('article', ['A\\B'])
+			ComponentFilter::allowlist('article', ['\\A\\B'])
 		);
 		$this->assertSame(['C\\D'], ComponentFilter::allowlist('missing', ['C\\D']));
 		$this->assertSame([], ComponentFilter::allowlist('invalid', []));
@@ -50,6 +50,18 @@ class ComponentFilterTest extends TestCase {
 		$out  = ComponentFilter::sanitize($html, ['A\\B']);
 
 		$this->assertSame($html, $out);
+	}
+
+	public function testLeadingBackslashInMarkerMatchesAllowlist() {
+		$html = '<div data-sycomponent="\\A\\B">carte</div>';
+
+		$this->assertSame($html, ComponentFilter::sanitize($html, ['A\\B']));
+	}
+
+	public function testLeadingBackslashInAllowlistMatchesMarker() {
+		$html = '<div data-sycomponent="A\\B">carte</div>';
+
+		$this->assertSame($html, ComponentFilter::sanitize($html, ['\\A\\B']));
 	}
 
 	public function testUnknownComponentKeepsRealText() {
