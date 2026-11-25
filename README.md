@@ -165,6 +165,12 @@ define('WYSIWYG_COMPONENT_ALLOWLIST', [
 consumer default; an absent or invalid entry keeps the default. The package
 default is never removed, so the security baseline remains.
 
+`ComponentRenderer::render($html, $allowlist, $container)` instantiates the
+allowlisted components, replaces the placeholder by their output and merges
+their CSS/JS assets. The `data-sycomponent` wrapper is kept, so the component is
+rebuilt on the next render even if `HtmlSanitizer` removed its form controls on
+save.
+
 ## Upload extensions
 
 `Sy\Bootstrap\Wysiwyg\Lib\UploadPolicy` owns the server-side whitelist. The
