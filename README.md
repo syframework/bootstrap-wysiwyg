@@ -172,8 +172,11 @@ rebuilt on the next render even if `HtmlSanitizer` removed its form controls on
 save.
 
 `assets/js/plugins/sycomponent.js` masks the rendered component while editing.
-The engine passes the source slots through `config.syComponentSlots`; the widget
-restores them on downcast, so a save stores `{SLOT}`, not the rendered form.
+The engine passes the source slots through `config.syComponentSlots` and the
+trusted rendered HTML through `config.syRenderedComponents`; the widget injects
+the rendered HTML after CKEditor parsing (outside the ACF), so component inline
+styles are preserved, then restores the source slot on downcast. A save stores
+`{SLOT}`, not the rendered form.
 
 ## Upload extensions
 
