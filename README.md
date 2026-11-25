@@ -202,6 +202,11 @@ context-menu entry. The dialog is prefilled from the current
 re-rendered through the same endpoint. The toolbar icon is the cube SVG at
 `assets/js/plugins/sycomponent.svg`, copied next to the plugin file.
 
+The plugin ships `lang/en.js` and `lang/fr.js`; CKEditor loads the file that
+matches `config.language`, so the consumer can align the dialog with the user's
+interface language. The Article consumer uses the connected user's `language`
+when available and falls back to the display language for guests.
+
 ## Upload extensions
 
 `Sy\Bootstrap\Wysiwyg\Lib\UploadPolicy` owns the server-side whitelist. The
