@@ -83,8 +83,9 @@ describe('components', () => {
 		await instance.start();
 		await flush();
 
-		expect(element.innerHTML).toContain('<span>rendered</span>');
+		expect(element.innerHTML).toContain('{SLOT}');
 		expect(window.CKEDITOR.__calls[0].config.syComponentSlots).toEqual({'A\n{}': '{SLOT}'});
+		expect(window.CKEDITOR.__calls[0].config.syRenderedComponents).toEqual({'A\n{}': '<span>rendered</span>'});
 	});
 });
 

@@ -1,10 +1,13 @@
 /**
  * CKEditor 4 widget for server-side components.
  *
- * The engine replaces the source slot with the rendered component before the
- * editor starts and passes the source slots through config.syComponentSlots.
- * The widget masks the rendered component while editing and restores the
- * source slot on downcast, so a save never stores the rendered form controls.
+ * The editor data model keeps the source slot (`{CONTACT_FORM}`) and the
+ * engine passes two maps through config:
+ *   - syComponentSlots: source slot to restore on downcast;
+ *   - syRenderedComponents: trusted component HTML to display.
+ *
+ * The rendered HTML is injected into the masked widget after CKEditor has
+ * parsed the data, so trusted component styles are not filtered by the ACF.
  */
 (function () {
 	'use strict';
@@ -16,10 +19,24 @@
 		return key;
 	}
 
+	function elementKey(element) {
+		return componentKey({
+			'data-sycomponent': element.getAttribute('data-sycomponent') || '',
+			'data-sycomponent-args': element.getAttribute('data-sycomponent-args')
+		});
+	}
+
 	CKEDITOR.plugins.add('sycomponent', {
 		requires: 'widget',
 
 		init: function (editor) {
+			function inject(widget) {
+				if (!widget || !widget.element || !widget.element.$) return;
+
+				var rendered = (editor.config.syRenderedComponents || {})[elementKey(widget.element)];
+				if (typeof rendered === 'string') widget.element.$.innerHTML = rendered;
+			}
+
 			editor.widgets.add('sycomponent', {
 				upcast: function (element) {
 					return typeof element.attributes['data-sycomponent'] !== 'undefined'
@@ -36,6 +53,18 @@
 				},
 
 				mask: true
+			});
+
+			editor.widgets.on('instanceCreated', function (event) {
+				inject(event.data);
+			});
+
+			// Fallback for widgets already present when the plugin initializes.
+			editor.on('instanceReady', function () {
+				var instances = editor.widgets.instances || {};
+				Object.keys(instances).forEach(function (id) {
+					inject(instances[id]);
+				});
 			});
 		}
 	});

@@ -539,15 +539,13 @@
 			return rendered;
 		}
 
-		function prepareComponentSlots(renderedHtml, sourceElement) {
-			var rendered = collectRenderedComponents(renderedHtml);
+		function collectComponentSlots(sourceElement, rendered) {
 			var slots = {};
 			if (!sourceElement) return slots;
 			sourceElement.querySelectorAll('[data-sycomponent]').forEach(function (component) {
 				var key = componentKey(component);
 				if (typeof rendered[key] !== 'string') return;
 				slots[key] = component.innerHTML;
-				component.innerHTML = rendered[key];
 			});
 			return slots;
 		}
@@ -687,12 +685,14 @@
 					if (typeof content === 'string') element.innerHTML = content;
 				}
 
-				var componentSlots = prepareComponentSlots(originalHtml, element);
+				var renderedComponents = collectRenderedComponents(originalHtml);
+				var componentSlots = collectComponentSlots(element, renderedComponents);
 				applyPreserveEmpty(opts);
 				registerPlugins(opts);
 
 				var config = buildConfig(opts);
 				if (Object.keys(componentSlots).length > 0) config.syComponentSlots = componentSlots;
+				if (Object.keys(renderedComponents).length > 0) config.syRenderedComponents = renderedComponents;
 				var ck = ckeditor();
 				enableInlineEditing();
 				editor = opts.mode === 'classic'
