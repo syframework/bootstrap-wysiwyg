@@ -64,6 +64,24 @@ describe('start', () => {
 		expect(events.of('error')[0].detail.retryable).toBe(false);
 		expect(events.of('error')[0].detail.message).toContain('not found');
 	});
+
+	it('makes an inline element contenteditable before CKEditor starts', async () => {
+		const element = mount('article-content', '<p>page</p>');
+		const instance = createInstance(element, {}, {net: createNet({})});
+
+		expect(element.getAttribute('contenteditable')).toBeNull();
+
+		await instance.start();
+		await flush();
+
+		expect(element.getAttribute('contenteditable')).toBe('true');
+		expect(window.CKEDITOR.__calls[0].element.getAttribute('contenteditable')).toBe('true');
+
+		await instance.stop({save: false});
+		await flush();
+
+		expect(element.getAttribute('contenteditable')).toBeNull();
+	});
 });
 
 describe('save', () => {

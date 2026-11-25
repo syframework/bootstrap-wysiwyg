@@ -477,6 +477,8 @@
 		if (!element && id) element = doc.getElementById(id);
 		var editor = null;
 		var originalHtml = null;
+		var originalContentEditable = null;
+		var contentEditableManaged = false;
 		var lastSaved = null;
 		var csrf = opts.csrf;
 		var dirty = false;
@@ -512,6 +514,28 @@
 			if (lastSaved && typeof lastSaved.content === 'string') return lastSaved.content;
 			if (typeof originalHtml === 'string') return originalHtml;
 			return editor ? editor.getData() : (element ? element.innerHTML : '');
+		}
+
+		/**
+		 * CKEditor 4 inline expects a contenteditable host: without it the
+		 * toolbar is rendered read-only (all buttons disabled). Keep the
+		 * original value so stop()/destroy() can restore a read-only page.
+		 */
+		function enableInlineEditing() {
+			if (opts.mode !== 'inline' || !element) return;
+			originalContentEditable = element.getAttribute('contenteditable');
+			element.setAttribute('contenteditable', 'true');
+			contentEditableManaged = true;
+		}
+
+		function restoreInlineEditing() {
+			if (!contentEditableManaged || !element) return;
+			if (originalContentEditable === null) {
+				element.removeAttribute('contenteditable');
+			} else {
+				element.setAttribute('contenteditable', originalContentEditable);
+			}
+			contentEditableManaged = false;
 		}
 
 		function restore() {
@@ -632,11 +656,13 @@
 
 				var config = buildConfig(opts);
 				var ck = ckeditor();
+				enableInlineEditing();
 				editor = opts.mode === 'classic'
 					? ck.replace(id, config)
 					: ck.inline(id, config);
 
 				if (!editor) {
+					restoreInlineEditing();
 					fail(0, 'SyWysiwyg: CKEditor returned no instance', false, false);
 					return instance;
 				}
@@ -659,6 +685,7 @@
 					bindEditorEvents();
 				});
 			}).catch(function (error) {
+				if (!editor) restoreInlineEditing();
 				fail(0, (error && error.message) || 'SyWysiwyg: start failed', true, false);
 				return instance;
 			});
@@ -824,6 +851,7 @@
 				}
 				editor = null;
 			}
+			restoreInlineEditing();
 			dirty = false;
 			if (!destroyed) {
 				destroyed = true;
