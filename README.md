@@ -171,6 +171,10 @@ their CSS/JS assets. The `data-sycomponent` wrapper is kept, so the component is
 rebuilt on the next render even if `HtmlSanitizer` removed its form controls on
 save.
 
+`assets/js/plugins/sycomponent.js` masks the rendered component while editing.
+The engine passes the source slots through `config.syComponentSlots`; the widget
+restores them on downcast, so a save stores `{SLOT}`, not the rendered form.
+
 ## Upload extensions
 
 `Sy\Bootstrap\Wysiwyg\Lib\UploadPolicy` owns the server-side whitelist. The
