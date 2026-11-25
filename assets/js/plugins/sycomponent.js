@@ -63,6 +63,42 @@
 		}).join(' ');
 	}
 
+	var FALLBACK_MESSAGES = {
+		button: 'Component',
+		insertTitle: 'Insert component',
+		editTitle: 'Edit component',
+		editMenu: 'Edit component',
+		component: 'Component',
+		argumentsJson: 'Arguments (JSON)',
+		noArguments: 'This component takes no arguments.',
+		choose: 'Choose…',
+		defaultOption: '(default)',
+		yes: 'Yes',
+		no: 'No',
+		chooseComponent: 'Choose a component.',
+		invalidJson: 'Arguments must be valid JSON.',
+		invalidJsonShape: 'Arguments must be a JSON object or array.',
+		requiredField: 'The "%field%" field is required.',
+		invalidInteger: 'The "%field%" field must be an integer.',
+		invalidNumber: 'The "%field%" field must be a number.',
+		invalidFieldJson: 'The "%field%" field must be valid JSON.',
+		invalidArray: 'The "%field%" field must be a JSON array.',
+		rendering: '(rendering…)',
+		saveToRender: '(save to render)',
+		componentFallback: 'Component'
+	};
+
+	function message(editor, key, params) {
+		var messages = editor && editor.lang && editor.lang.sycomponent ? editor.lang.sycomponent : {};
+		var text = messages[key] || FALLBACK_MESSAGES[key] || key;
+		if (params) {
+			Object.keys(params).forEach(function (name) {
+				text = String(text).replace(new RegExp('%' + name + '%', 'g'), params[name]);
+			});
+		}
+		return text;
+	}
+
 	function configuredComponents(editor) {
 		return editor.config.components || {};
 	}
@@ -122,7 +158,7 @@
 		if (node) node.textContent = title;
 	}
 
-	function createField(doc, parameter) {
+	function createField(doc, editor, parameter) {
 		var wrapper = doc.createElement('div');
 		wrapper.style.marginBottom = '8px';
 
@@ -149,20 +185,20 @@
 			if (parameter.required) {
 				var choose = doc.createElement('option');
 				choose.value = '';
-				choose.textContent = 'Choose…';
+				choose.textContent = message(editor, 'choose');
 				input.appendChild(choose);
 			} else {
 				var defaultOption = doc.createElement('option');
 				defaultOption.value = '';
-				defaultOption.textContent = '(default)';
+				defaultOption.textContent = message(editor, 'defaultOption');
 				input.appendChild(defaultOption);
 			}
 			var yes = doc.createElement('option');
 			yes.value = '1';
-			yes.textContent = 'Yes';
+			yes.textContent = message(editor, 'yes');
 			var no = doc.createElement('option');
 			no.value = '0';
-			no.textContent = 'No';
+			no.textContent = message(editor, 'no');
 			input.appendChild(yes);
 			input.appendChild(no);
 			if (parameter.hasDefault && typeof parameter.default === 'boolean') {
@@ -251,7 +287,7 @@
 
 		if (params === null) {
 			var note = document.createElement('p');
-			note.textContent = 'Arguments (JSON)';
+			note.textContent = message(editor, 'argumentsJson');
 			note.style.margin = '0 0 4px';
 			note.style.fontWeight = 'bold';
 			container.appendChild(note);
@@ -269,7 +305,7 @@
 
 		if (!params.length) {
 			var empty = document.createElement('p');
-			empty.textContent = 'This component takes no arguments.';
+			empty.textContent = message(editor, 'noArguments');
 			empty.style.margin = '0';
 			empty.style.color = '#666';
 			container.appendChild(empty);
@@ -277,7 +313,7 @@
 		}
 
 		params.forEach(function (parameter, index) {
-			container.appendChild(createField(document, parameter));
+			container.appendChild(createField(document, editor, parameter));
 			applyValue(container, parameter, valueFor(values, parameter, index));
 		});
 	}
@@ -295,11 +331,11 @@
 			try {
 				parsed = JSON.parse(raw);
 			} catch (error) {
-				alert('Arguments must be valid JSON.');
+				alert(message(editor, 'invalidJson'));
 				return null;
 			}
 			if (parsed === null || typeof parsed !== 'object') {
-				alert('Arguments must be a JSON object or array.');
+				alert(message(editor, 'invalidJsonShape'));
 				return null;
 			}
 			return raw;
@@ -316,7 +352,7 @@
 			if (parameter.type === 'bool') {
 				if (value === '') {
 					if (parameter.required) {
-						alert('The "' + humanize(parameter.name) + '" field is required.');
+						alert(message(editor, 'requiredField', {field: humanize(parameter.name)}));
 						return null;
 					}
 					continue;
@@ -327,7 +363,7 @@
 
 			if (value === '') {
 				if (parameter.required) {
-					alert('The "' + humanize(parameter.name) + '" field is required.');
+					alert(message(editor, 'requiredField', {field: humanize(parameter.name)}));
 					return null;
 				}
 				continue;
@@ -335,13 +371,13 @@
 
 			if (parameter.type === 'int') {
 				if (!/^-?\d+$/.test(value)) {
-					alert('The "' + humanize(parameter.name) + '" field must be an integer.');
+					alert(message(editor, 'invalidInteger', {field: humanize(parameter.name)}));
 					return null;
 				}
 				values[parameter.name] = parseInt(value, 10);
 			} else if (parameter.type === 'float') {
 				if (isNaN(Number(value))) {
-					alert('The "' + humanize(parameter.name) + '" field must be a number.');
+					alert(message(editor, 'invalidNumber', {field: humanize(parameter.name)}));
 					return null;
 				}
 				values[parameter.name] = parseFloat(value);
@@ -350,11 +386,11 @@
 				try {
 					parsedValue = JSON.parse(value);
 				} catch (error) {
-					alert('The "' + humanize(parameter.name) + '" field must be valid JSON.');
+					alert(message(editor, 'invalidFieldJson', {field: humanize(parameter.name)}));
 					return null;
 				}
 				if (parameter.type === 'array' && !Array.isArray(parsedValue)) {
-					alert('The "' + humanize(parameter.name) + '" field must be a JSON array.');
+					alert(message(editor, 'invalidArray', {field: humanize(parameter.name)}));
 					return null;
 				}
 				values[parameter.name] = parsedValue;
@@ -368,8 +404,8 @@
 
 	function maskWidget(editor, widget, suffix) {
 		if (!widget || !widget.element || !widget.element.$) return;
-		var component = widget.element.getAttribute('data-sycomponent') || 'Component';
-		widget.element.$.textContent = componentLabel(editor, component) + (suffix || ' (save to render)');
+		var component = widget.element.getAttribute('data-sycomponent') || message(editor, 'componentFallback');
+		widget.element.$.textContent = componentLabel(editor, component) + ' ' + message(editor, suffix || 'saveToRender');
 	}
 
 	/**
@@ -417,7 +453,7 @@
 		}
 
 		var key = elementKey(widget.element);
-		maskWidget(editor, widget, ' (rendering…)');
+		maskWidget(editor, widget, 'rendering');
 
 		var body = new URLSearchParams();
 		body.append('component', component);
@@ -447,6 +483,7 @@
 
 	CKEDITOR.plugins.add('sycomponent', {
 		requires: 'widget',
+		lang: 'en,fr',
 
 		init: function (editor) {
 			function inject(widget) {
@@ -555,7 +592,7 @@
 			if (editor.addMenuGroup && editor.addMenuItem) {
 				editor.addMenuGroup('sycomponent', 10);
 				var menuItem = {
-					label: 'Edit component',
+					label: message(editor, 'editMenu'),
 					command: 'sycomponentEdit',
 					group: 'sycomponent'
 				};
@@ -574,7 +611,7 @@
 			}
 
 			var button = {
-				label: editor.config.syComponentLabel || 'Component',
+				label: editor.config.syComponentLabel || message(editor, 'button'),
 				command: 'sycomponentInsert',
 				toolbar: 'insert,5'
 			};
@@ -610,7 +647,7 @@
 		}
 
 		return {
-			title: 'Insert component',
+			title: message(editor, 'insertTitle'),
 			minWidth: 520,
 			minHeight: 260,
 			contents: [{
@@ -619,7 +656,7 @@
 					{
 						type: 'select',
 						id: 'component',
-						label: 'Component',
+						label: message(editor, 'component'),
 						items: items,
 						'default': items[0][1],
 						required: true,
@@ -649,13 +686,13 @@
 				if (component) setComponent(dialog, component);
 
 				var rawArgs = editing ? editing.element.getAttribute('data-sycomponent-args') : null;
-				setDialogTitle(dialog, editing ? 'Edit component' : 'Insert component');
+				setDialogTitle(dialog, editing ? message(editor, 'editTitle') : message(editor, 'insertTitle'));
 				renderFields(editor, dialog, parseArgs(rawArgs), rawArgs);
 			},
 			onOk: function () {
 				var component = this.getValueOf('info', 'component');
 				if (!component) {
-					alert('Choose a component.');
+					alert(message(editor, 'chooseComponent'));
 					return false;
 				}
 
