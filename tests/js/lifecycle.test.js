@@ -132,6 +132,30 @@ describe('save', () => {
 
 		expect(instance.getLastSaved().content).toBe('<p>edited</p>');
 	});
+
+	it('keeps the instance recoverable after a fatal save', async () => {
+		const element = mount('article-content', '<p>page</p>');
+		const instance = createInstance(element, {saveUrl: '/api/article'},
+			{net: createNet({post: () => ({ok: false, status: 403, data: {status: 'ko', message: 'Forbidden'}})})});
+
+		await instance.start();
+		await flush();
+		const editor = window.CKEDITOR.instances['article-content'];
+		editor.setData('<p>edited</p>');
+		editor.fire('change');
+
+		const result = await instance.save();
+		await flush();
+
+		expect(result.retryable).toBe(false);
+		expect(window.SyWysiwyg.get('article-content')).toBe(instance);
+		expect(instance.isStarted()).toBe(false);
+
+		await instance.start();
+		await flush();
+
+		expect(instance.isStarted()).toBe(true);
+	});
 });
 
 describe('stop', () => {

@@ -748,9 +748,9 @@
 					}
 
 					if (isFatal(response.status, data)) {
-						fail(response.status, messageOf(data), false, true);
 						restore();
-						destroy();
+						teardownEditor();
+						fail(response.status, messageOf(data), false, false);
 						return {ok: false, status: response.status, data: data, retryable: false};
 					}
 
@@ -827,7 +827,7 @@
 					return {saved: false, dirty: true, content: lastSaved ? lastSaved.content : null};
 				}
 
-				// Fatal: `save()` already restored and destroyed.
+				// Fatal: `save()` already restored and tore down the editor.
 				emit('stopped', {
 					elementId: id,
 					editor: null,
