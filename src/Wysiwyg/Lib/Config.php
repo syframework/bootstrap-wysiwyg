@@ -393,6 +393,7 @@ class Config {
 			'enabled'    => self::bool($raw, 'components.enabled', false),
 			'allowlist'  => $allowlist,
 			'reportOnly' => self::bool($raw, 'components.report-only', false),
+			'renderUrl'  => self::nullableString($raw, 'components.render-url'),
 		];
 
 		$metadata = ComponentMeta::describe($allowlist);

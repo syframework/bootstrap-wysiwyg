@@ -10,20 +10,15 @@
  * carries the human label, the generated slot and the constructor parameters,
  * so the dialog can render typed fields instead of a raw JSON textarea.
  *
+ * `config.components.renderUrl` is optional: when the consumer provides it,
+ * the plugin asks the server for the component HTML after an insertion or an
+ * edit, so the editor shows the final rendering immediately.
+ *
  * The rendered HTML is injected into the masked widget after CKEditor has
  * parsed the data, so trusted component styles are not filtered by the ACF.
  */
 (function () {
 	'use strict';
-
-	var ICON = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
-		'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 21 21">'
-		+ '<g fill="none" stroke="#666" stroke-linecap="round" stroke-linejoin="round" transform="translate(3 3)">'
-		+ '<path d="m8.49227788 1.06701593 5.00000002 2.85714286c.62315.35608571 1.0077221 1.01877259 1.0077221 1.73648628v4.67870983c0 .7177137-.3845721 1.3804006-1.0077221 1.7364863l-5.00000002 2.8571429c-.61486534.3513516-1.36969042.3513516-1.98455576 0l-5-2.8571429c-.62314999-.3560857-1.00772212-1.0187726-1.00772212-1.7364863v-4.67870983c0-.71771369.38457213-1.38040057 1.00772212-1.73648628l5-2.85714286c.61486534-.35135162 1.36969042-.35135162 1.98455576 0z"/>'
-		+ '<path d="m7.5 8.5v6.5"/>'
-		+ '<path d="m1 5 5.55180035 2.98943096c.59195265.31874373 1.30444665.31874373 1.8963993 0l5.55180035-2.98943096"/>'
-		+ '</g></svg>'
-	);
 
 	function componentKey(component, args) {
 		return args ? component + '\n' + args : component;
@@ -121,12 +116,27 @@
 		return element && element.$ ? element.$.querySelector('.sycomponent-fields') : null;
 	}
 
+	function setDialogTitle(dialog, title) {
+		var element = dialog.getElement();
+		var node = element && element.$ ? element.$.querySelector('.cke_dialog_title') : null;
+		if (node) node.textContent = title;
+	}
+
 	function createField(doc, parameter) {
 		var wrapper = doc.createElement('div');
 		wrapper.style.marginBottom = '8px';
 
 		var label = doc.createElement('label');
-		label.textContent = humanize(parameter.name) + (parameter.required ? ' *' : '');
+		label.className = 'cke_dialog_ui_labeled_label';
+		label.textContent = humanize(parameter.name);
+		if (parameter.required) {
+			label.appendChild(doc.createTextNode(' '));
+			var required = doc.createElement('span');
+			required.className = 'cke_dialog_ui_labeled_required';
+			required.setAttribute('aria-hidden', 'true');
+			required.textContent = '*';
+			label.appendChild(required);
+		}
 		label.style.display = 'block';
 		label.style.fontWeight = 'bold';
 		label.style.marginBottom = '2px';
@@ -135,6 +145,7 @@
 		var input;
 		if (parameter.type === 'bool') {
 			input = doc.createElement('select');
+			input.className = 'cke_dialog_ui_input_select';
 			if (parameter.required) {
 				var choose = doc.createElement('option');
 				choose.value = '';
@@ -159,6 +170,7 @@
 			}
 		} else if (parameter.type === 'array' || parameter.type === 'json') {
 			input = doc.createElement('textarea');
+			input.className = 'cke_dialog_ui_input_textarea';
 			input.rows = 3;
 			if (parameter.hasDefault) {
 				input.value = JSON.stringify(parameter.default);
@@ -167,6 +179,7 @@
 			}
 		} else {
 			input = doc.createElement('input');
+			input.className = 'cke_dialog_ui_input_text';
 			input.type = parameter.type === 'int' || parameter.type === 'float' ? 'number' : 'text';
 			if (parameter.type === 'int') input.step = '1';
 			if (parameter.type === 'float') input.step = 'any';
@@ -185,7 +198,48 @@
 		return wrapper;
 	}
 
-	function renderFields(editor, dialog) {
+	function parseArgs(raw) {
+		if (!raw) return null;
+		try {
+			var value = JSON.parse(raw);
+			return value && typeof value === 'object' ? value : null;
+		} catch (error) {
+			return null;
+		}
+	}
+
+	function valueFor(values, parameter, index) {
+		if (!values) return undefined;
+		if (Array.isArray(values)) return values[index];
+		if (Object.prototype.hasOwnProperty.call(values, parameter.name)) {
+			return values[parameter.name];
+		}
+		return undefined;
+	}
+
+	function applyValue(container, parameter, value) {
+		if (value === undefined) return;
+		var input = container.querySelector('[data-sycomponent-param="' + parameter.name + '"]');
+		if (!input) return;
+
+		if (parameter.type === 'bool') {
+			if (value === true || value === 1 || value === 'true' || value === '1') {
+				input.value = '1';
+			} else if (value === false || value === 0 || value === 'false' || value === '0') {
+				input.value = '0';
+			} else {
+				input.value = '';
+			}
+			return;
+		}
+		if (parameter.type === 'array' || parameter.type === 'json') {
+			input.value = JSON.stringify(value);
+			return;
+		}
+		input.value = value === null ? '' : String(value);
+	}
+
+	function renderFields(editor, dialog, values, rawArgs) {
 		var container = fieldsContainer(dialog);
 		if (!container) return;
 
@@ -201,9 +255,10 @@
 			container.appendChild(note);
 
 			var textarea = document.createElement('textarea');
+			textarea.className = 'cke_dialog_ui_input_textarea';
 			textarea.setAttribute('data-sycomponent-json', '1');
 			textarea.rows = 5;
-			textarea.value = '{}';
+			textarea.value = rawArgs || '{}';
 			textarea.style.width = '100%';
 			textarea.style.boxSizing = 'border-box';
 			container.appendChild(textarea);
@@ -219,8 +274,9 @@
 			return;
 		}
 
-		params.forEach(function (parameter) {
+		params.forEach(function (parameter, index) {
 			container.appendChild(createField(document, parameter));
+			applyValue(container, parameter, valueFor(values, parameter, index));
 		});
 	}
 
@@ -308,6 +364,85 @@
 		return JSON.stringify(values);
 	}
 
+	function maskWidget(editor, widget, suffix) {
+		if (!widget || !widget.element || !widget.element.$) return;
+		var component = widget.element.getAttribute('data-sycomponent') || 'Component';
+		widget.element.$.textContent = componentLabel(editor, component) + (suffix || ' (save to render)');
+	}
+
+	/**
+	 * The render endpoint is not the article page: a preview form must post to
+	 * the page the editor is editing, like the server-side initial render.
+	 */
+	function fixPreviewActions(html) {
+		var host = document.createElement('div');
+		host.innerHTML = html;
+		var forms = host.querySelectorAll('form');
+		for (var i = 0; i < forms.length; i++) {
+			forms[i].setAttribute('action', window.location.href);
+		}
+		return host.innerHTML;
+	}
+
+	function findWidget(editor, token) {
+		var instances = editor.widgets.instances || {};
+		var ids = Object.keys(instances);
+		for (var i = 0; i < ids.length; i++) {
+			var widget = instances[ids[i]];
+			if (widget && widget.name === 'sycomponent'
+				&& widget.element.getAttribute('data-sycomponent-token') === token) {
+				return widget;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Ask the consumer's render endpoint for the final component HTML and
+	 * replace the widget content. The source slot stays untouched: it is what
+	 * the next save serializes.
+	 */
+	function refreshComponent(editor, widget) {
+		if (!widget || !widget.element) return;
+
+		var url = configuredComponents(editor).renderUrl;
+		var component = widget.element.getAttribute('data-sycomponent');
+		var args = widget.element.getAttribute('data-sycomponent-args') || '{}';
+
+		if (!url) {
+			maskWidget(editor, widget);
+			return;
+		}
+
+		var key = elementKey(widget.element);
+		maskWidget(editor, widget, ' (rendering…)');
+
+		var body = new URLSearchParams();
+		body.append('component', component);
+		body.append('args', args);
+
+		fetch(url, {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+			body: body.toString()
+		}).then(function (response) {
+			if (!response.ok) throw new Error('Component render failed');
+			return response.json();
+		}).then(function (data) {
+			if (!data || data.status !== 'ok' || typeof data.html !== 'string') {
+				maskWidget(editor, widget);
+				return;
+			}
+			var preview = fixPreviewActions(data.html);
+			var rendered = editor.config.syRenderedComponents || (editor.config.syRenderedComponents = {});
+			rendered[key] = preview;
+			widget.element.$.innerHTML = preview;
+		}).catch(function () {
+			maskWidget(editor, widget);
+		});
+	}
+
 	CKEDITOR.plugins.add('sycomponent', {
 		requires: 'widget',
 
@@ -328,10 +463,7 @@
 				// the next page load will render the real component.
 				var slots = editor.config.syComponentSlots || (editor.config.syComponentSlots = {});
 				if (typeof slots[key] === 'undefined') slots[key] = widget.element.$.innerHTML;
-				widget.element.$.textContent = componentLabel(
-					editor,
-					widget.element.getAttribute('data-sycomponent') || 'Component'
-				) + ' (save to render)';
+				maskWidget(editor, widget);
 			}
 
 			editor.widgets.add('sycomponent', {
@@ -369,13 +501,80 @@
 
 			if (!allowlist(editor).length) return;
 
-			editor.addCommand('sycomponent', new CKEDITOR.dialogCommand('sycomponent'));
-			editor.ui.addButton('Sycomponent', {
-				label: editor.config.syComponentLabel || 'Component',
-				command: 'sycomponent',
-				toolbar: 'insert,5',
-				icon: ICON
+			// A rendered form intercepts CKEditor's doubleclick event, so listen
+			// on the editable DOM and walk up to the component wrapper instead.
+			var doubleClickBound = false;
+			function bindDoubleClick() {
+				if (doubleClickBound) return;
+				var editable = editor.editable ? editor.editable() : null;
+				if (!editable) return;
+				doubleClickBound = true;
+				editable.attachListener(editable, 'dblclick', function (event) {
+					var target = event.data.getTarget();
+					// The widget mask is a child of CKEditor's wrapper, not of
+					// the source element: getByElement resolves both cases.
+					var widget = editor.widgets.getByElement(target);
+					if (!widget) {
+						var wrapper = target.getAscendant(function (element) {
+							return element.hasAttribute && element.hasAttribute('data-sycomponent');
+						}, true);
+						if (wrapper) widget = editor.widgets.getByElement(wrapper);
+					}
+					if (!widget || widget.name !== 'sycomponent') return;
+					editor._sycomponentEditWidget = widget;
+					editable.focus();
+					editor.openDialog('sycomponent');
+					event.data.preventDefault();
+				});
+			}
+			editor.on('contentDom', bindDoubleClick);
+			bindDoubleClick();
+
+			editor.addCommand('sycomponentInsert', {
+				exec: function () {
+					editor._sycomponentEditWidget = null;
+					editor.openDialog('sycomponent');
+				}
 			});
+			editor.addCommand('sycomponentEdit', {
+				exec: function () {
+					editor.openDialog('sycomponent');
+				}
+			});
+
+			if (editor.addMenuGroup && editor.addMenuItem) {
+				editor.addMenuGroup('sycomponent', 10);
+				editor.addMenuItem('sycomponentEdit', {
+					label: 'Edit component',
+					command: 'sycomponentEdit',
+					group: 'sycomponent'
+				});
+				if (editor.contextMenu) {
+					editor.contextMenu.addListener(function (element) {
+						var widget = editor.widgets.getByElement(element);
+						if (widget && widget.name === 'sycomponent') {
+							editor._sycomponentEditWidget = widget;
+							return {sycomponentEdit: CKEDITOR.TRISTATE_OFF};
+						}
+						return null;
+					});
+				}
+			}
+
+			var icon = editor.config.syComponentIcon;
+			if (!icon) {
+				var plugin = CKEDITOR.plugins.get('sycomponent');
+				if (plugin && plugin.path) {
+					icon = plugin.path.replace(/\/+$/, '') + '/sycomponent.svg';
+				}
+			}
+			var button = {
+				label: editor.config.syComponentLabel || 'Component',
+				command: 'sycomponentInsert',
+				toolbar: 'insert,5'
+			};
+			if (icon) button.icon = icon;
+			editor.ui.addButton('Sycomponent', button);
 		}
 	});
 
@@ -384,6 +583,26 @@
 			return [componentLabel(editor, component), component];
 		});
 		if (!items.length) items = [['', '']];
+
+		function setComponent(dialog, component) {
+			var select = dialog.getContentElement('info', 'component');
+			var input = select ? select.getInputElement().$ : null;
+			if (!input) return;
+			var found = false;
+			for (var i = 0; i < input.options.length; i++) {
+				if (input.options[i].value === component) {
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				var option = document.createElement('option');
+				option.value = component;
+				option.text = fallbackLabel(component);
+				input.appendChild(option);
+			}
+			input.value = component;
+		}
 
 		return {
 			title: 'Insert component',
@@ -400,7 +619,7 @@
 						'default': items[0][1],
 						required: true,
 						onChange: function () {
-							renderFields(editor, this.getDialog());
+							renderFields(editor, this.getDialog(), null, null);
 						}
 					},
 					{
@@ -411,10 +630,22 @@
 				]
 			}],
 			onLoad: function () {
-				renderFields(editor, this);
+				renderFields(editor, this, null, null);
 			},
 			onShow: function () {
-				renderFields(editor, this);
+				var dialog = this;
+				var editing = editor._sycomponentEditWidget || null;
+				dialog._sycomponentEditing = editing;
+
+				var component = editing ? editing.element.getAttribute('data-sycomponent') : null;
+				var select = dialog.getContentElement('info', 'component');
+				var input = select ? select.getInputElement().$ : null;
+				if (!component && input && input.options.length) component = input.options[0].value;
+				if (component) setComponent(dialog, component);
+
+				var rawArgs = editing ? editing.element.getAttribute('data-sycomponent-args') : null;
+				setDialogTitle(dialog, editing ? 'Edit component' : 'Insert component');
+				renderFields(editor, dialog, parseArgs(rawArgs), rawArgs);
 			},
 			onOk: function () {
 				var component = this.getValueOf('info', 'component');
@@ -426,6 +657,35 @@
 				var args = readArguments(editor, this);
 				if (args === null) return false;
 
+				var slots = editor.config.syComponentSlots || (editor.config.syComponentSlots = {});
+				var editing = this._sycomponentEditing || null;
+				if (editing) {
+					var oldComponent = editing.element.getAttribute('data-sycomponent');
+					var oldKey = elementKey(editing.element);
+
+					editing.element.setAttribute('data-sycomponent', component);
+					if (args === '{}') {
+						editing.element.removeAttribute('data-sycomponent-args');
+					} else {
+						editing.element.setAttribute('data-sycomponent-args', args);
+					}
+
+					var newKey = elementKey(editing.element);
+					if (typeof slots[newKey] === 'undefined') {
+						var oldSlot = slots[oldKey];
+						slots[newKey] = (component === oldComponent && typeof oldSlot === 'string')
+							? oldSlot
+							: componentSlot(editor, component);
+					}
+
+					editor._sycomponentEditWidget = null;
+					this._sycomponentEditing = null;
+					editor.fire('change');
+					refreshComponent(editor, editing);
+					editor.focus();
+					return;
+				}
+
 				var key = component;
 				var attributes = ' data-sycomponent="' + escapeAttr(component) + '"';
 				if (args !== '{}') {
@@ -433,12 +693,28 @@
 					key = componentKey(component, args);
 				}
 
-				var slots = editor.config.syComponentSlots || (editor.config.syComponentSlots = {});
 				if (typeof slots[key] === 'undefined') {
 					slots[key] = componentSlot(editor, component);
 				}
 
-				editor.insertHtml('<div' + attributes + '>' + escapeText(slots[key]) + '</div>');
+				var token = 'sycomponent-' + CKEDITOR.tools.getUniqueId();
+				editor.insertHtml(
+					'<div' + attributes + ' data-sycomponent-token="' + token + '">'
+					+ escapeText(slots[key])
+					+ '</div>'
+				);
+
+				var attempts = 0;
+				function finishInsert() {
+					var widget = findWidget(editor, token);
+					if (!widget) {
+						if (attempts++ < 20) setTimeout(finishInsert, 10);
+						return;
+					}
+					widget.element.removeAttribute('data-sycomponent-token');
+					refreshComponent(editor, widget);
+				}
+				finishInsert();
 				editor.focus();
 			}
 		};

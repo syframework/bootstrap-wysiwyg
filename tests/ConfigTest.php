@@ -227,6 +227,24 @@ class ConfigTest extends TestCase {
 		$this->assertTrue($config['components']['enabled']);
 		$this->assertSame(['Sy\Bootstrap\Component\Place\Map'], $config['components']['allowlist']);
 		$this->assertTrue($config['components']['reportOnly']);
+		$this->assertNull($config['components']['renderUrl']);
+	}
+
+	public function testComponentsRenderUrl() {
+		$config = Config::resolve($this->options([
+			'assets'     => [
+				'engine'      => '/assets/js/wysiwyg.js',
+				'ckeditor-js' => '/ckeditor.js',
+				'plugins'     => '/assets/js/plugins',
+			],
+			'components' => [
+				'enabled'    => true,
+				'allowlist'  => ['A\B'],
+				'render-url' => '/editor/render',
+			],
+		]))->toArray();
+
+		$this->assertSame('/editor/render', $config['components']['renderUrl']);
 	}
 
 	public function testComponentsMetadata() {

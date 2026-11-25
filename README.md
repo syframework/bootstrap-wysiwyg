@@ -90,7 +90,7 @@ start/stop buttons without creating a second editor.
 | `normalize-empty-blocks` | bool | `true` | drop empty `<p>` from the payload |
 | `templates` / `templates-files` | string / string[] | `null` / `[]` | `{LANG}` and `{CKEDITOR_ROOT}` are substituted by PHP |
 | `extra-plugins` / `remove-plugins` | string[] | `[]` | union with `config` |
-| `components.*` | — | disabled | component filtering and insertion-dialog metadata (Place, CMS); `assets.plugins` required when enabled |
+| `components.*` | — | disabled | component filtering, insertion-dialog metadata and optional `render-url` preview (Place, CMS); `assets.plugins` required when enabled |
 | `guard-unload` | bool | `true` | single global `beforeunload` listener |
 | `autosave.{interval,on-blur,on-dialog-close}` | — | `0`, false, false | autosave |
 | `assets.{engine,ckeditor-js,ckeditor-root,plugins}` | string | — | `engine` and `ckeditor-js` are required |
@@ -187,6 +187,20 @@ parameters and sends named arguments. Components without a constructor hide the
 arguments area; classes that cannot be inspected fall back to a JSON textarea.
 The dialog reuses an existing source slot for the same component and arguments,
 so inserting a second instance never rewrites the first one.
+
+A consumer can set `components.render-url` to preview the final component before
+a save. After an insertion or an edit, the plugin POSTs `component` and `args` to
+that URL and replaces the widget content with the returned `html`. The source
+slot is untouched, so the next save still serializes the slot. The endpoint must
+check the same-origin request, the consumer allowlist and the user permissions;
+Article implements it as `/editor/article/render`. Without a render URL, the
+widget keeps the `(save to render)` mask until the next page load.
+
+An existing component is edited with a double-click or the **Edit component**
+context-menu entry. The dialog is prefilled from the current
+`data-sycomponent` / `data-sycomponent-args` attributes, and the widget is
+re-rendered through the same endpoint. The toolbar icon is the cube SVG at
+`assets/js/plugins/sycomponent.svg`, copied next to the plugin file.
 
 ## Upload extensions
 

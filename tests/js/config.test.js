@@ -45,6 +45,36 @@ describe('buildConfig — consumer config', () => {
 		expect('toolbar' in config).toBe(false);
 	});
 
+	it('exposes the component icon next to the plugin assets', async () => {
+		const config = await resolvedConfig({
+			components: {enabled: true, allowlist: ['A\\B']},
+			extraPlugins: ['sycomponent'],
+			assets: {
+				engine: '/assets/js/wysiwyg.js',
+				ckeditorJs: '/assets/ckeditor/ckeditor.js',
+				ckeditorRoot: '/assets/ckeditor',
+				plugins: '/assets/js/plugins/',
+			},
+		});
+
+		expect(config.syComponentIcon).toBe('/assets/js/plugins/sycomponent.svg');
+	});
+
+	it('keeps the component render URL', async () => {
+		const config = await resolvedConfig({
+			components: {enabled: true, allowlist: ['A\\B'], renderUrl: '/editor/render'},
+			extraPlugins: ['sycomponent'],
+			assets: {
+				engine: '/assets/js/wysiwyg.js',
+				ckeditorJs: '/assets/ckeditor/ckeditor.js',
+				ckeditorRoot: '/assets/ckeditor',
+				plugins: '/assets/js/plugins',
+			},
+		});
+
+		expect(config.components.renderUrl).toBe('/editor/render');
+	});
+
 	it('keeps the component metadata map as-is', async () => {
 		const metadata = {'A\\B': {label: 'A B', slot: '{B}', parameters: []}};
 		const config = await resolvedConfig({

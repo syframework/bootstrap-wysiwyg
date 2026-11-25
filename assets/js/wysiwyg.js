@@ -165,6 +165,9 @@
 				if (isPlainObject(value) && isPlainObject(value.metadata)) {
 					result.components.metadata = clone(value.metadata);
 				}
+				if (isPlainObject(value) && has(value, 'renderUrl')) {
+					result.components.renderUrl = value.renderUrl;
+				}
 				return;
 			}
 			result[key] = isPlainObject(base[key]) && isPlainObject(value)
@@ -702,6 +705,11 @@
 				// The sycomponent plugin reads its insertion allowlist from
 				// `editor.config.components`; keep the normalized PHP contract.
 				config.components = clone(opts.components);
+				if (opts.components.enabled && opts.assets.plugins) {
+					// CKEditor prefixes a relative icon path with its basePath,
+					// so the icon must be an absolute URL (D19 quinquies).
+					config.syComponentIcon = opts.assets.plugins.replace(/\/+$/, '') + '/sycomponent.svg';
+				}
 				if (Object.keys(componentSlots).length > 0) config.syComponentSlots = componentSlots;
 				if (Object.keys(renderedComponents).length > 0) config.syRenderedComponents = renderedComponents;
 				var ck = ckeditor();
