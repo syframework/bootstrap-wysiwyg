@@ -193,6 +193,8 @@
 		input.setAttribute('data-sycomponent-type', parameter.type);
 		input.setAttribute('autocomplete', 'off');
 		input.style.width = '100%';
+		input.style.maxWidth = '100%';
+		input.style.margin = '0';
 		input.style.boxSizing = 'border-box';
 		wrapper.appendChild(input);
 		return wrapper;
@@ -542,13 +544,23 @@
 				}
 			});
 
+			var icon = editor.config.syComponentIcon;
+			if (!icon) {
+				var plugin = CKEDITOR.plugins.get('sycomponent');
+				if (plugin && plugin.path) {
+					icon = plugin.path.replace(/\/+$/, '') + '/sycomponent.svg';
+				}
+			}
+
 			if (editor.addMenuGroup && editor.addMenuItem) {
 				editor.addMenuGroup('sycomponent', 10);
-				editor.addMenuItem('sycomponentEdit', {
+				var menuItem = {
 					label: 'Edit component',
 					command: 'sycomponentEdit',
 					group: 'sycomponent'
-				});
+				};
+				if (icon) menuItem.icon = icon;
+				editor.addMenuItem('sycomponentEdit', menuItem);
 				if (editor.contextMenu) {
 					editor.contextMenu.addListener(function (element) {
 						var widget = editor.widgets.getByElement(element);
@@ -561,13 +573,6 @@
 				}
 			}
 
-			var icon = editor.config.syComponentIcon;
-			if (!icon) {
-				var plugin = CKEDITOR.plugins.get('sycomponent');
-				if (plugin && plugin.path) {
-					icon = plugin.path.replace(/\/+$/, '') + '/sycomponent.svg';
-				}
-			}
 			var button = {
 				label: editor.config.syComponentLabel || 'Component',
 				command: 'sycomponentInsert',
