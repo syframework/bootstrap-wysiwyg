@@ -516,6 +516,42 @@
 			return editor ? editor.getData() : (element ? element.innerHTML : '');
 		}
 
+		function componentKey(element) {
+			var key = element.getAttribute('data-sycomponent') || '';
+			var args = element.getAttribute('data-sycomponent-args');
+			if (args) key += '\n' + args;
+			return key;
+		}
+
+		/**
+		 * Capture the rendered components present before the GET replaces the
+		 * DOM with the source. The sycomponent widget restores these source
+		 * slots on save, so the component is never serialized as its rendered
+		 * form controls.
+		 */
+		function collectRenderedComponents(html) {
+			var rendered = {};
+			var host = (element ? element.ownerDocument : global.document).createElement('div');
+			host.innerHTML = html || '';
+			host.querySelectorAll('[data-sycomponent]').forEach(function (component) {
+				rendered[componentKey(component)] = component.innerHTML;
+			});
+			return rendered;
+		}
+
+		function prepareComponentSlots(renderedHtml, sourceElement) {
+			var rendered = collectRenderedComponents(renderedHtml);
+			var slots = {};
+			if (!sourceElement) return slots;
+			sourceElement.querySelectorAll('[data-sycomponent]').forEach(function (component) {
+				var key = componentKey(component);
+				if (typeof rendered[key] !== 'string') return;
+				slots[key] = component.innerHTML;
+				component.innerHTML = rendered[key];
+			});
+			return slots;
+		}
+
 		/**
 		 * CKEditor 4 inline expects a contenteditable host: without it the
 		 * toolbar is rendered read-only (all buttons disabled). Keep the
@@ -651,10 +687,12 @@
 					if (typeof content === 'string') element.innerHTML = content;
 				}
 
+				var componentSlots = prepareComponentSlots(originalHtml, element);
 				applyPreserveEmpty(opts);
 				registerPlugins(opts);
 
 				var config = buildConfig(opts);
+				if (Object.keys(componentSlots).length > 0) config.syComponentSlots = componentSlots;
 				var ck = ckeditor();
 				enableInlineEditing();
 				editor = opts.mode === 'classic'

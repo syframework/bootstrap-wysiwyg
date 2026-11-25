@@ -52,6 +52,42 @@ describe('registerPlugins', () => {
 	});
 });
 
+describe('components', () => {
+	it('captures rendered components and stores their source slots', async () => {
+		const element = mount(
+			'article-content',
+			'<div data-sycomponent="A" data-sycomponent-args="{}"><span>rendered</span></div>'
+		);
+		const net = createNet({
+			get: () => ({
+				ok: true,
+				status: 200,
+				data: {
+					status: 'ok',
+					content: '<div data-sycomponent="A" data-sycomponent-args="{}">{SLOT}</div>',
+				},
+			}),
+		});
+		const instance = createInstance(element, {
+			loadUrl: '/api/article',
+			components: {enabled: true, allowlist: ['A'], reportOnly: false},
+			extraPlugins: ['sycomponent'],
+			assets: {
+				engine: '/assets/js/wysiwyg.js',
+				ckeditorJs: '/assets/ckeditor/ckeditor.js',
+				ckeditorRoot: '/assets/ckeditor',
+				plugins: '/assets/js/plugins',
+			},
+		}, {net});
+
+		await instance.start();
+		await flush();
+
+		expect(element.innerHTML).toContain('<span>rendered</span>');
+		expect(window.CKEDITOR.__calls[0].config.syComponentSlots).toEqual({'A\n{}': '{SLOT}'});
+	});
+});
+
 describe('preserve-empty', () => {
 	it('mutates CKEDITOR.dtd before the editor is created', async () => {
 		await startWith({preserveEmpty: ['span', 'i']});
