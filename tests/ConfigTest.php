@@ -229,6 +229,25 @@ class ConfigTest extends TestCase {
 		$this->assertTrue($config['components']['reportOnly']);
 	}
 
+	public function testComponentsMetadata() {
+		$config = Config::resolve($this->options([
+			'assets'     => [
+				'engine'      => '/assets/js/wysiwyg.js',
+				'ckeditor-js' => '/ckeditor.js',
+				'plugins'     => '/assets/js/plugins',
+			],
+			'components' => [
+				'enabled'   => true,
+				'allowlist' => [' \\Sy\\Test\\Fixtures\\Form\\Contact ', '\\Sy\\Test\\Fixtures\\Form\\Contact'],
+			],
+		]))->toArray();
+
+		$this->assertSame(['Sy\Test\Fixtures\Form\Contact'], $config['components']['allowlist']);
+		$this->assertArrayHasKey('Sy\Test\Fixtures\Form\Contact', $config['components']['metadata']);
+		$this->assertSame('Form Contact', $config['components']['metadata']['Sy\Test\Fixtures\Form\Contact']['label']);
+		$this->assertSame('{CONTACT}', $config['components']['metadata']['Sy\Test\Fixtures\Form\Contact']['slot']);
+	}
+
 	public function testUploadMapping() {
 		$config = Config::resolve($this->options([
 			'upload' => ['image' => ['browse' => '/browse?type=image', 'window' => ['width' => 800]]],

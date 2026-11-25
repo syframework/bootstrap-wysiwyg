@@ -382,11 +382,23 @@ class Config {
 	 * @return array
 	 */
 	private static function components(array $raw) {
-		return [
+		$allowlist = [];
+		foreach (self::stringList($raw, 'components.allowlist', []) as $class) {
+			$class = ltrim(trim($class), '\\');
+			if ($class !== '') $allowlist[] = $class;
+		}
+		$allowlist = array_values(array_unique($allowlist));
+
+		$components = [
 			'enabled'    => self::bool($raw, 'components.enabled', false),
-			'allowlist'  => self::stringList($raw, 'components.allowlist', []),
+			'allowlist'  => $allowlist,
 			'reportOnly' => self::bool($raw, 'components.report-only', false),
 		];
+
+		$metadata = ComponentMeta::describe($allowlist);
+		if ($metadata !== []) $components['metadata'] = $metadata;
+
+		return $components;
 	}
 
 	/**

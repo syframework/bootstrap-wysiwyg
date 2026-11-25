@@ -44,6 +44,22 @@ describe('buildConfig — consumer config', () => {
 
 		expect('toolbar' in config).toBe(false);
 	});
+
+	it('keeps the component metadata map as-is', async () => {
+		const metadata = {'A\\B': {label: 'A B', slot: '{B}', parameters: []}};
+		const config = await resolvedConfig({
+			components: {enabled: true, allowlist: ['A\\B'], metadata},
+			extraPlugins: ['sycomponent'],
+			assets: {
+				engine: '/assets/js/wysiwyg.js',
+				ckeditorJs: '/assets/ckeditor/ckeditor.js',
+				ckeditorRoot: '/assets/ckeditor',
+				plugins: '/assets/js/plugins',
+			},
+		});
+
+		expect(config.components.metadata).toEqual(metadata);
+	});
 });
 
 describe('buildConfig — plugins', () => {

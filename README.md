@@ -90,7 +90,7 @@ start/stop buttons without creating a second editor.
 | `normalize-empty-blocks` | bool | `true` | drop empty `<p>` from the payload |
 | `templates` / `templates-files` | string / string[] | `null` / `[]` | `{LANG}` and `{CKEDITOR_ROOT}` are substituted by PHP |
 | `extra-plugins` / `remove-plugins` | string[] | `[]` | union with `config` |
-| `components.*` | — | disabled | component filtering (Place, CMS); `assets.plugins` required when enabled |
+| `components.*` | — | disabled | component filtering and insertion-dialog metadata (Place, CMS); `assets.plugins` required when enabled |
 | `guard-unload` | bool | `true` | single global `beforeunload` listener |
 | `autosave.{interval,on-blur,on-dialog-close}` | — | `0`, false, false | autosave |
 | `assets.{engine,ckeditor-js,ckeditor-root,plugins}` | string | — | `engine` and `ckeditor-js` are required |
@@ -176,7 +176,17 @@ The engine passes the source slots through `config.syComponentSlots` and the
 trusted rendered HTML through `config.syRenderedComponents`; the widget injects
 the rendered HTML after CKEditor parsing (outside the ACF), so component inline
 styles are preserved, then restores the source slot on downcast. A save stores
-`{SLOT}`, not the rendered form.
+the source slot, not the rendered form.
+
+`Sy\Bootstrap\Wysiwyg\Lib\ComponentMeta` describes the allowlisted classes for
+the insertion dialog. `Config` exposes the result as `components.metadata`:
+a human label (`Form Contact`, `Test InlineStyle`), a generated source slot
+(`{CONTACT}`, `{INLINE_STYLE}`) and the constructor parameters. The dialog
+renders typed fields (string, int, float, bool, array, JSON), validates required
+parameters and sends named arguments. Components without a constructor hide the
+arguments area; classes that cannot be inspected fall back to a JSON textarea.
+The dialog reuses an existing source slot for the same component and arguments,
+so inserting a second instance never rewrites the first one.
 
 ## Upload extensions
 

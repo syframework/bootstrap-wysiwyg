@@ -159,6 +159,14 @@
 				};
 				return;
 			}
+			if (key === 'components') {
+				result.components = merge(base.components, value);
+				// `metadata` is a class-name map, not a fixed option structure.
+				if (isPlainObject(value) && isPlainObject(value.metadata)) {
+					result.components.metadata = clone(value.metadata);
+				}
+				return;
+			}
 			result[key] = isPlainObject(base[key]) && isPlainObject(value)
 				? merge(base[key], value)
 				: clone(value);
