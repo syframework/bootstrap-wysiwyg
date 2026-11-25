@@ -783,7 +783,7 @@
 
 			if (!wasDirty) {
 				restore();
-				destroy();
+				teardownEditor();
 				emit('stopped', {
 					elementId: id,
 					editor: null,
@@ -796,7 +796,7 @@
 
 			if (!shouldSave) {
 				restore();
-				destroy();
+				teardownEditor();
 				emit('stopped', {
 					elementId: id,
 					editor: null,
@@ -811,7 +811,7 @@
 				if (result.ok) {
 					var content = lastSaved ? lastSaved.content : null;
 					restore();
-					destroy();
+					teardownEditor();
 					emit('stopped', {elementId: id, editor: null, saved: true, dirty: false, content: content});
 					return {saved: true, dirty: false, content: content};
 				}
@@ -839,7 +839,12 @@
 			});
 		}
 
-		function destroy() {
+		/**
+		 * Tear down the CKEditor instance but keep the SyWysiwyg instance
+		 * registered: Article calls start() again on the same page after a
+		 * successful stop().
+		 */
+		function teardownEditor() {
 			clearTimers();
 			unregisterDirty(instance);
 			var hadEditor = !!editor;
@@ -853,6 +858,11 @@
 			}
 			restoreInlineEditing();
 			dirty = false;
+			return hadEditor;
+		}
+
+		function destroy() {
+			var hadEditor = teardownEditor();
 			if (!destroyed) {
 				destroyed = true;
 				emit('destroyed', {elementId: id});

@@ -82,6 +82,26 @@ describe('start', () => {
 
 		expect(element.getAttribute('contenteditable')).toBeNull();
 	});
+
+	it('keeps the instance registered so start can run again after stop', async () => {
+		const element = mount('article-content', '<p>page</p>');
+		const instance = createInstance(element, {}, {net: createNet({})});
+
+		await instance.start();
+		await flush();
+		await instance.stop({save: false});
+		await flush();
+
+		expect(window.SyWysiwyg.get('article-content')).toBe(instance);
+		expect(instance.isStarted()).toBe(false);
+
+		await instance.start();
+		await flush();
+
+		expect(instance.isStarted()).toBe(true);
+		expect(element.getAttribute('contenteditable')).toBe('true');
+		expect(window.CKEDITOR.__calls.length).toBe(2);
+	});
 });
 
 describe('save', () => {
