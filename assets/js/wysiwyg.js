@@ -691,6 +691,9 @@
 				registerPlugins(opts);
 
 				var config = buildConfig(opts);
+				// The sycomponent plugin reads its insertion allowlist from
+				// `editor.config.components`; keep the normalized PHP contract.
+				config.components = clone(opts.components);
 				if (Object.keys(componentSlots).length > 0) config.syComponentSlots = componentSlots;
 				if (Object.keys(renderedComponents).length > 0) config.syRenderedComponents = renderedComponents;
 				var ck = ckeditor();
