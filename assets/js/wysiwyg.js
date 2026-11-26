@@ -79,6 +79,7 @@
 		},
 		translations: {},
 		translateUrl: null,
+		translateLang: null,
 		translateLabels: {},
 		guardUnload: true,
 		autosave: {
@@ -317,7 +318,15 @@
 		if (removed) config.removePlugins = removed;
 		ensurePluginButtons(config, extra);
 
-		// 3. templates: only when the consumer did not set them.
+		// 3. sytranslate reads its endpoint, labels and content language from
+		// `editor.config`: the engine is the only writer. Without this copy the
+		// plugin saw `translateUrl === undefined` and never sent the POST.
+		if (config.translations === undefined) config.translations = clone(options.translations);
+		if (config.translateLabels === undefined) config.translateLabels = clone(options.translateLabels);
+		if (config.translateUrl === undefined && options.translateUrl) config.translateUrl = options.translateUrl;
+		if (config.translateLang === undefined && options.translateLang) config.translateLang = options.translateLang;
+
+		// 4. templates: only when the consumer did not set them.
 		if (!config.templates && options.templates) {
 			config.templates = options.templates;
 		}
@@ -326,7 +335,7 @@
 			if (!config.templates) config.templates = 'default';
 		}
 
-		// 4. uploads: map every documented CKEditor key, `json` in ajax mode.
+		// 5. uploads: map every documented CKEditor key, `json` in ajax mode.
 		var uploads = [
 			{type: 'image', url: options.upload.image.browse, keys: ['filebrowserImageBrowseUrl']},
 			{type: 'image', url: options.upload.image.upload, keys: ['filebrowserImageUploadUrl', 'imageUploadUrl'], ajax: true},
@@ -343,7 +352,7 @@
 			});
 		});
 
-		// 5. dialog dimensions: CKEditor has one pair of settings for both
+		// 6. dialog dimensions: CKEditor has one pair of settings for both
 		// file types, so the image window is the reference; a consumer that
 		// needs another size sets `filebrowserWindow*` in `config` directly.
 		if (config.filebrowserWindowWidth === undefined) {

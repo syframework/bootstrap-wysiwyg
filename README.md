@@ -250,6 +250,11 @@ Two consumer plugins ship with the engine and are activated by listing them in
   editor cannot rewrite attributes the consumer owns (links, form actions). The
   engine never interprets `data-sylock` itself.
 
+`translations`, `translate-url`, `translate-lang` and `translate-labels` are
+copied into `editor.config` by `buildConfig()` (a value the consumer already set
+in `config` wins): the plugin reads them from there, so an option that is not
+forwarded leaves the endpoint undefined and the POST never runs.
+
 Both plugins are registered through `CKEDITOR.plugins.addExternal` before the
 editor is created, whether or not the component feature is enabled: the guard is
 `assets.plugins`, and `extra-plugins` decides which files are requested.

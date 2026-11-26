@@ -227,6 +227,42 @@ describe('buildConfig — uploads', () => {
 	});
 });
 
+describe('buildConfig — sytranslate options', () => {
+	it('forwards the endpoint, labels and content language to the config', async () => {
+		const config = await resolvedConfig({
+			translateUrl: '/api/content-translation',
+			translateLang: 'fr',
+			translations: {hello: 'bonjour'},
+			translateLabels: {add: 'Ajouter'},
+		});
+
+		// The plugin reads `editor.config`: without this copy, `translateUrl`
+		// was undefined and the POST never ran.
+		expect(config.translateUrl).toBe('/api/content-translation');
+		expect(config.translateLang).toBe('fr');
+		expect(config.translations).toEqual({hello: 'bonjour'});
+		expect(config.translateLabels).toEqual({add: 'Ajouter'});
+	});
+
+	it('keeps an explicit consumer value', async () => {
+		const config = await resolvedConfig({
+			translateUrl: '/api/content-translation',
+			translateLang: 'fr',
+			config: {translateUrl: '/project/translate', translateLang: 'en'},
+		});
+
+		expect(config.translateUrl).toBe('/project/translate');
+		expect(config.translateLang).toBe('en');
+	});
+
+	it('never emits an empty translateUrl', async () => {
+		const config = await resolvedConfig({});
+
+		expect(config.translateUrl).toBeUndefined();
+		expect(config.translateLang).toBeUndefined();
+	});
+});
+
 describe('buildConfig — plugin buttons', () => {
 	it('appends the button of a loaded plugin the consumer forgot', async () => {
 		const config = await resolvedConfig({
