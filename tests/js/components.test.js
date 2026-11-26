@@ -42,10 +42,31 @@ describe('registerPlugins', () => {
 		]);
 	});
 
-	it('registers nothing when components are disabled', async () => {
+	it('registers sytranslate and sywidget without the component feature', async () => {
 		await startWith({
-			components: {enabled: false, allowlist: [], reportOnly: false},
-			extraPlugins: ['sycomponent'],
+			components: {enabled: false, allowlist: []},
+			extraPlugins: ['sytranslate', 'sywidget'],
+		});
+
+		expect(window.CKEDITOR.__externalPlugins).toEqual([
+			{name: 'sytranslate', path: '/assets/js/plugins/sytranslate.js'},
+			{name: 'sywidget', path: '/assets/js/plugins/sywidget.js'},
+		]);
+	});
+
+	it('registers nothing when extraPlugins is empty', async () => {
+		await startWith({
+			components: {enabled: false, allowlist: []},
+			extraPlugins: [],
+		});
+
+		expect(window.CKEDITOR.__externalPlugins).toEqual([]);
+	});
+
+	it('registers nothing without an assets directory', async () => {
+		await startWith({
+			extraPlugins: ['sytranslate'],
+			assets: {plugins: ''},
 		});
 
 		expect(window.CKEDITOR.__externalPlugins).toEqual([]);

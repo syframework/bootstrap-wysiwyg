@@ -101,6 +101,7 @@ class Config {
 			// Misc
 			'translations'    => self::scalarMap($raw, 'translations'),
 			'translateUrl'    => self::nullableString($raw, 'translate-url'),
+			'translateLang'   => self::nullableString($raw, 'translate-lang'),
 			'translateLabels' => self::scalarMap($raw, 'translate-labels'),
 			'guardUnload'     => self::bool($raw, 'guard-unload', true),
 			'autosave'        => self::autosave($raw),

@@ -258,6 +258,35 @@ class ConfigTest extends TestCase {
 		$this->assertSame('/editor/render', $config['components']['renderUrl']);
 	}
 
+	public function testTranslationOptions() {
+		$config = Config::resolve($this->options([
+			'assets'          => [
+				'engine'      => '/assets/js/wysiwyg.js',
+				'ckeditor-js' => '/ckeditor.js',
+			],
+			'translations'    => ['hello' => 'bonjour'],
+			'translate-url'   => '/api/content-translation',
+			'translate-lang'  => 'fr',
+			'translate-labels' => ['language' => 'Langue', 'key' => 'Clé'],
+		]))->toArray();
+
+		$this->assertSame(['hello' => 'bonjour'], $config['translations']);
+		$this->assertSame('/api/content-translation', $config['translateUrl']);
+		$this->assertSame('fr', $config['translateLang']);
+		$this->assertSame(['language' => 'Langue', 'key' => 'Clé'], $config['translateLabels']);
+	}
+
+	public function testTranslateLangDefaultsToNull() {
+		$config = Config::resolve($this->options([
+			'assets' => [
+				'engine'      => '/assets/js/wysiwyg.js',
+				'ckeditor-js' => '/ckeditor.js',
+			],
+		]))->toArray();
+
+		$this->assertNull($config['translateLang']);
+	}
+
 	public function testComponentsMetadata() {
 		$config = Config::resolve($this->options([
 			'assets'     => [

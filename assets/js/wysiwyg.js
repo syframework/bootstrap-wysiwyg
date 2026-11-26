@@ -367,7 +367,10 @@
 
 	/** D8/V17: activate `sy*` plugins, from files shipped with the engine. */
 	function registerPlugins(options) {
-		if (!options.components.enabled) return;
+		// `sycomponent` only enters extraPlugins when components are enabled;
+		// `sytranslate` / `sywidget` are independent, so the guard is the
+		// assets directory, not the component flag.
+		if (!options.assets.plugins) return;
 		var editor = ckeditor();
 		if (!editor.plugins || typeof editor.plugins.addExternal !== 'function') return;
 		PLUGINS.forEach(function (name) {

@@ -91,6 +91,7 @@ start/stop buttons without creating a second editor.
 | `templates` / `templates-files` | string / string[] | `null` / `[]` | `{LANG}` and `{CKEDITOR_ROOT}` are substituted by PHP |
 | `extra-plugins` / `remove-plugins` | string[] | `[]` | union with `config` |
 | `components.*` | — | disabled | component filtering, insertion-dialog metadata and optional `render-url` preview (Place, CMS); `assets.plugins` required when enabled |
+| `translations` / `translate-url` / `translate-lang` / `translate-labels` | — | `{}` / null / null / `{}` | `sytranslate` widget: current values, POST endpoint, content language, dialog labels |
 | `guard-unload` | bool | `true` | single global `beforeunload` listener |
 | `autosave.{interval,on-blur,on-dialog-close}` | — | `0`, false, false | autosave |
 | `assets.{engine,ckeditor-js,ckeditor-root,plugins}` | string | — | `engine` and `ckeditor-js` are required |
@@ -212,6 +213,29 @@ The plugin ships `lang/en.js` and `lang/fr.js`; CKEditor loads the file that
 matches `config.language`, so the consumer can align the dialog with the user's
 interface language. The Article consumer uses the connected user's `language`
 when available and falls back to the display language for guests.
+
+### Translation and locked-widget plugins
+
+Two consumer plugins ship with the engine and are activated by listing them in
+`extra-plugins`; `assets.plugins` must point to the copied plugin directory:
+
+- `assets/js/plugins/sytranslate.js` — inline translation widget for the CMS. It
+  keeps the `{"key"}` placeholder in the saved source and displays the current
+  value while editing. `config.translations` holds the key → value map,
+  `config.translateUrl` receives the POST (`key`, `value`, and `lang` when
+  `config.translate-lang` is set, otherwise the server derives the language from
+  the request), and `config.translateLabels` overrides the dialog labels
+  (`language`, `key`, `value`, `add`). The toolbar icon is the local
+  `sytranslate.svg`.
+- `assets/js/plugins/sywidget.js` — preserves `data-sylock` markup. With
+  `data-sylock="attributes"` the widget snapshots the element attributes into
+  `data-sylock-attributes` while editing and restores them on downcast, so the
+  editor cannot rewrite attributes the consumer owns (links, form actions). The
+  engine never interprets `data-sylock` itself.
+
+Both plugins are registered through `CKEDITOR.plugins.addExternal` before the
+editor is created, whether or not the component feature is enabled: the guard is
+`assets.plugins`, and `extra-plugins` decides which files are requested.
 
 ## Upload extensions
 
