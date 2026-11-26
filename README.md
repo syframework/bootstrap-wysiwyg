@@ -201,7 +201,9 @@ widget keeps the `(save to render)` mask until the next page load.
 An existing component is edited with a double-click or the **Edit component**
 context-menu entry. The dialog is prefilled from the current
 `data-sycomponent` / `data-sycomponent-args` attributes, and the widget is
-re-rendered through the same endpoint. The toolbar icon is the cube SVG at
+re-rendered through the same endpoint. The dialog only edits components still
+present in the allowlist; a widget whose component was removed shows a localized
+notice and is left untouched. The toolbar icon is the cube SVG at
 `assets/js/plugins/sycomponent.svg`, copied next to the plugin file.
 
 The plugin ships `lang/en.js` and `lang/fr.js`; CKEditor loads the file that

@@ -143,16 +143,6 @@ class ComponentMeta {
 	 * @param string $value
 	 * @return string
 	 */
-	private static function humanize(string $value): string {
-		$value = preg_replace('/([a-z0-9])([A-Z])/', '$1 $2', $value);
-		$value = preg_replace('/([A-Z])([A-Z][a-z])/', '$1 $2', $value);
-		return trim((string) preg_replace('/\s+/', ' ', $value));
-	}
-
-	/**
-	 * @param string $value
-	 * @return string
-	 */
 	private static function snakeCase(string $value): string {
 		$value = preg_replace('/([a-z0-9])([A-Z])/', '$1_$2', $value);
 		$value = preg_replace('/([A-Z])([A-Z][a-z])/', '$1_$2', $value);

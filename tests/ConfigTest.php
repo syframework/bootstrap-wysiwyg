@@ -230,6 +230,17 @@ class ConfigTest extends TestCase {
 		$this->assertNull($config['components']['renderUrl']);
 	}
 
+	public function testComponentsMetadataIsNotBuiltWhenDisabled() {
+		$config = Config::resolve($this->options([
+			'components' => [
+				'allowlist' => ['Sy\Test\Fixtures\Form\Contact'],
+			],
+		]))->toArray();
+
+		$this->assertFalse($config['components']['enabled']);
+		$this->assertArrayNotHasKey('metadata', $config['components']);
+	}
+
 	public function testComponentsRenderUrl() {
 		$config = Config::resolve($this->options([
 			'assets'     => [

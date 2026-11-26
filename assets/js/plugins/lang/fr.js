@@ -20,5 +20,6 @@ CKEDITOR.plugins.setLang('sycomponent', 'fr', {
 	invalidArray: 'Le champ « %field% » doit être un tableau JSON.',
 	rendering: '(rendu en cours…)',
 	saveToRender: '(enregistrer pour rendre)',
-	componentFallback: 'Composant'
+	componentFallback: 'Composant',
+	componentNotAllowed: "Ce composant n’est plus disponible."
 });

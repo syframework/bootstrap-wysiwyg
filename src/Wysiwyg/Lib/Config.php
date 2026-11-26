@@ -396,8 +396,10 @@ class Config {
 			'renderUrl'  => self::nullableString($raw, 'components.render-url'),
 		];
 
-		$metadata = ComponentMeta::describe($allowlist);
-		if ($metadata !== []) $components['metadata'] = $metadata;
+		if ($components['enabled']) {
+			$metadata = ComponentMeta::describe($allowlist);
+			if ($metadata !== []) $components['metadata'] = $metadata;
+		}
 
 		return $components;
 	}

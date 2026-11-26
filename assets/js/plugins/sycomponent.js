@@ -85,7 +85,8 @@
 		invalidArray: 'The "%field%" field must be a JSON array.',
 		rendering: '(rendering…)',
 		saveToRender: '(save to render)',
-		componentFallback: 'Component'
+		componentFallback: 'Component',
+		componentNotAllowed: 'This component is no longer available.'
 	};
 
 	function message(editor, key, params) {
@@ -136,6 +137,10 @@
 		return components.allowlist.map(function (component) {
 			return String(component).replace(/^\\+/, '');
 		});
+	}
+
+	function isAllowed(editor, component) {
+		return allowlist(editor).indexOf(String(component).replace(/^\\+/, '')) !== -1;
 	}
 
 	/**
@@ -560,6 +565,10 @@
 						if (wrapper) widget = editor.widgets.getByElement(wrapper);
 					}
 					if (!widget || widget.name !== 'sycomponent') return;
+					if (!isAllowed(editor, widget.element.getAttribute('data-sycomponent'))) {
+						alert(message(editor, 'componentNotAllowed'));
+						return;
+					}
 					editor._sycomponentEditWidget = widget;
 					editable.focus();
 					editor.openDialog('sycomponent');
@@ -601,7 +610,8 @@
 				if (editor.contextMenu) {
 					editor.contextMenu.addListener(function (element) {
 						var widget = editor.widgets.getByElement(element);
-						if (widget && widget.name === 'sycomponent') {
+						if (widget && widget.name === 'sycomponent'
+							&& isAllowed(editor, widget.element.getAttribute('data-sycomponent'))) {
 							editor._sycomponentEditWidget = widget;
 							return {sycomponentEdit: CKEDITOR.TRISTATE_OFF};
 						}
@@ -627,23 +637,17 @@
 		if (!items.length) items = [['', '']];
 
 		function setComponent(dialog, component) {
+			var normalized = String(component).replace(/^\\+/, '');
 			var select = dialog.getContentElement('info', 'component');
 			var input = select ? select.getInputElement().$ : null;
-			if (!input) return;
-			var found = false;
+			if (!input) return false;
 			for (var i = 0; i < input.options.length; i++) {
-				if (input.options[i].value === component) {
-					found = true;
-					break;
+				if (input.options[i].value === normalized) {
+					input.value = normalized;
+					return true;
 				}
 			}
-			if (!found) {
-				var option = document.createElement('option');
-				option.value = component;
-				option.text = fallbackLabel(component);
-				input.appendChild(option);
-			}
-			input.value = component;
+			return false;
 		}
 
 		return {
@@ -680,10 +684,25 @@
 				dialog._sycomponentEditing = editing;
 
 				var component = editing ? editing.element.getAttribute('data-sycomponent') : null;
-				var select = dialog.getContentElement('info', 'component');
-				var input = select ? select.getInputElement().$ : null;
-				if (!component && input && input.options.length) component = input.options[0].value;
-				if (component) setComponent(dialog, component);
+				if (editing && !isAllowed(editor, component)) {
+					editor._sycomponentEditWidget = null;
+					dialog._sycomponentEditing = null;
+					alert(message(editor, 'componentNotAllowed'));
+					dialog.hide();
+					return;
+				}
+				if (!component) {
+					var select = dialog.getContentElement('info', 'component');
+					var input = select ? select.getInputElement().$ : null;
+					if (input && input.options.length) component = input.options[0].value;
+				}
+				if (!setComponent(dialog, component)) {
+					editor._sycomponentEditWidget = null;
+					dialog._sycomponentEditing = null;
+					alert(message(editor, 'componentNotAllowed'));
+					dialog.hide();
+					return;
+				}
 
 				var rawArgs = editing ? editing.element.getAttribute('data-sycomponent-args') : null;
 				setDialogTitle(dialog, editing ? message(editor, 'editTitle') : message(editor, 'insertTitle'));

@@ -20,5 +20,6 @@ CKEDITOR.plugins.setLang('sycomponent', 'en', {
 	invalidArray: 'The "%field%" field must be a JSON array.',
 	rendering: '(rendering…)',
 	saveToRender: '(save to render)',
-	componentFallback: 'Component'
+	componentFallback: 'Component',
+	componentNotAllowed: 'This component is no longer available.'
 });
