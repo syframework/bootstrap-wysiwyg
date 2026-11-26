@@ -42,6 +42,12 @@ trait CkFile {
 		// Delete file action
 		$deleteFile = $this->post('delete-file');
 		if (!empty($deleteFile)) {
+			$expected = $this->browseCsrfToken();
+			$token    = $this->post('csrf');
+			if (!is_string($token) or !hash_equals($expected, $token)) {
+				$this->requestError(['message' => 'Invalid CSRF token']);
+				return;
+			}
 			if (self::deleteFile($dir, $deleteFile)) {
 				$this->redirect(isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '');
 				return;
@@ -56,6 +62,7 @@ trait CkFile {
 		$c->setVars([
 			'CKEDITOR_FUNC_NUM' => $func,
 			'DELETE_URL'        => self::escapeAttr(isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : ''),
+			'CSRF'              => self::escapeAttr($this->browseCsrfToken()),
 		]);
 
 		if (is_dir($dir)) {
@@ -77,6 +84,18 @@ trait CkFile {
 		}
 
 		return $this->ok($c);
+	}
+
+	/**
+	 * Session CSRF token shared with the bootstrap forms.
+	 *
+	 * @return string
+	 */
+	private function browseCsrfToken() {
+		if (!isset($_SESSION['csrfToken']) or !is_string($_SESSION['csrfToken']) or $_SESSION['csrfToken'] === '') {
+			$_SESSION['csrfToken'] = bin2hex(random_bytes(32));
+		}
+		return $_SESSION['csrfToken'];
 	}
 
 	/**

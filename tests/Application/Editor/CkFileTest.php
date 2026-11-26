@@ -56,6 +56,28 @@ class CkFileHarness {
 		return $this->requestFuncNum();
 	}
 
+	public $error = null;
+
+	public $redirected = null;
+
+	public $response = null;
+
+	public function browse() {
+		return $this->browseAction();
+	}
+
+	protected function requestError($data = null) {
+		$this->error = $data;
+	}
+
+	protected function redirect($url) {
+		$this->redirected = $url;
+	}
+
+	protected function ok($data = null) {
+		$this->response = $data;
+	}
+
 }
 
 class CkFileTest extends TestCase {
@@ -154,6 +176,30 @@ class CkFileTest extends TestCase {
 		$this->assertSame(0, $this->harness(['CKEditorFuncNum' => '-1'])->funcNum());
 		$this->assertSame(0, $this->harness(['CKEditorFuncNum' => ''])->funcNum());
 		$this->assertSame(0, $this->harness([])->funcNum());
+	}
+
+	public function testDeleteFileRequiresCsrfToken() {
+		$dir = CkFileHarness::resolveUploadDirectory('article', 'image', '1');
+		$this->assertNotNull($dir);
+		if (!is_dir($dir)) mkdir($dir, 0777, true);
+		$file = $dir . '/delete-me.png';
+		file_put_contents($file, 'x');
+		$_SESSION = [];
+
+		$h = $this->harness(['type' => 'image', 'id' => '1'], ['delete-file' => 'delete-me.png']);
+		$h->browse();
+		$this->assertNotNull($h->error);
+		$this->assertNull($h->redirected);
+		$this->assertFileExists($file);
+
+		$token = isset($_SESSION['csrfToken']) ? $_SESSION['csrfToken'] : null;
+		$this->assertIsString($token);
+
+		$h = $this->harness(['type' => 'image', 'id' => '1'], ['delete-file' => 'delete-me.png', 'csrf' => $token]);
+		$h->browse();
+		$this->assertNull($h->error);
+		$this->assertNotNull($h->redirected);
+		$this->assertFileDoesNotExist($file);
 	}
 
 	public function testAllowedExtensions() {
