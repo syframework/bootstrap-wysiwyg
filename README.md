@@ -235,7 +235,11 @@ Two consumer plugins ship with the engine and are activated by listing them in
   (`language`, `key`, `value`, `add`). Labels resolve consumer config first,
   then the plugin language pack (`lang/en.js`, `lang/fr.js`, selected by
   `config.language`), then the built-in English defaults, so a consumer that
-  passes no labels still gets a localised dialog. The toolbar icon is the systemuicons
+  passes no labels still gets a localised dialog. A failed POST is reported
+  (`alert` + `console.error`) with the HTTP status and the `{message}` the
+  endpoint returned: the slot would otherwise look saved while the table stayed
+  empty. A consumer without `translate-url` warns once that the typed value is
+  display-only (the server translator resolves `{"key"}` at render time). The toolbar icon is the systemuicons
   **translate** glyph (`https://www.systemuicons.com/images/icons/translate.svg`),
   shipped locally as `sytranslate.svg` and normalised to 16×16 with the same
   1.5 px stroke as the other plugin icons; `config.syTranslateIcon` overrides the
