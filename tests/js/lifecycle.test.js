@@ -301,3 +301,191 @@ describe('autosave', () => {
 		expect(instance.isDirty()).toBe(false);
 	});
 });
+
+describe('event order (§2.3)', () => {
+	it('emits ready, start, change, save, saved, stopped in that order', async () => {
+		const element = mount('article-content', '<p>page</p>');
+		const instance = createInstance(element, {saveUrl: '/api/article'},
+			{net: createNet({post: () => ({ok: true, status: 200, data: {status: 'ok', content: '<p>server</p>'}})})});
+
+		await instance.start();
+		await flush();
+		const editor = window.CKEDITOR.instances['article-content'];
+		editor.setData('<p>edited</p>');
+		editor.fire('change');
+
+		await instance.stop();
+		await flush();
+
+		expect(events.events.map((event) => event.name))
+			.toEqual(['ready', 'start', 'change', 'save', 'saved', 'stopped']);
+	});
+
+	it('never emits saved before the response resolves', async () => {
+		let respond;
+		const element = mount('article-content', '<p>page</p>');
+		const instance = createInstance(element, {saveUrl: '/api/article'}, {
+			net: {
+				getJson: () => Promise.resolve({ok: true, status: 200, data: null}),
+				postForm: () => new Promise((resolve) => { respond = resolve; }),
+			},
+		});
+
+		await instance.start();
+		await flush();
+
+		const saving = instance.save();
+		expect(events.of('saved')).toHaveLength(0);
+
+		respond({ok: true, status: 200, data: {status: 'ok', content: '<p>server</p>'}});
+		const result = await saving;
+
+		expect(result.ok).toBe(true);
+		expect(events.of('saved')).toHaveLength(1);
+	});
+
+	it('never emits saved on a refusal', async () => {
+		const element = mount('article-content', '<p>page</p>');
+		const instance = createInstance(element, {saveUrl: '/api/article'},
+			{net: createNet({post: () => ({ok: false, status: 403, data: {status: 'ko', message: 'Forbidden'}})})});
+
+		await instance.start();
+		await flush();
+		await instance.save();
+
+		expect(events.of('saved')).toHaveLength(0);
+		expect(events.of('error')).toHaveLength(1);
+		expect(events.of('error')[0].detail.retryable).toBe(false);
+	});
+});
+
+describe('csrf (§2.4)', () => {
+	it('rotates the token returned by a save', async () => {
+		let attempt = 0;
+		const net = createNet({
+			post() {
+				attempt += 1;
+				return {ok: true, status: 200, data: {status: 'ok', csrf: 'token-' + attempt}};
+			},
+		});
+		const element = mount('article-content', '<p>page</p>');
+		const instance = createInstance(element, {saveUrl: '/api/article', csrf: 'token-0'}, {net});
+
+		await instance.start();
+		await flush();
+		await instance.save();
+		await instance.save();
+
+		const posts = net.calls.filter((call) => call.method === 'POST');
+		expect(posts.map((call) => call.data.csrf)).toEqual(['token-0', 'token-1']);
+	});
+
+	it('refreshes the token on the configured interval', async () => {
+		vi.useFakeTimers();
+		const net = createNet({
+			get(call) {
+				return call.url === '/api/csrf'
+					? {ok: true, status: 200, data: {csrf: 'fresh'}}
+					: {ok: true, status: 200, data: null};
+			},
+			post: () => ({ok: true, status: 200, data: {status: 'ok'}}),
+		});
+		const element = mount('article-content', '<p>page</p>');
+		const instance = createInstance(element, {
+			saveUrl: '/api/article',
+			csrf: 'stale',
+			csrfUrl: '/api/csrf',
+			csrfRefresh: 1,
+		}, {net});
+
+		await instance.start();
+		await vi.advanceTimersByTimeAsync(1000);
+		await instance.save();
+
+		const posts = net.calls.filter((call) => call.method === 'POST');
+		expect(posts[posts.length - 1].data.csrf).toBe('fresh');
+	});
+
+	it('replays at most once when ko keeps returning a token', async () => {
+		let attempt = 0;
+		const net = createNet({
+			post() {
+				attempt += 1;
+				return {ok: false, status: 409, data: {status: 'ko', message: 'Conflict', csrf: 't' + attempt}};
+			},
+		});
+		const element = mount('article-content', '<p>page</p>');
+		const instance = createInstance(element, {saveUrl: '/api/article'}, {net});
+
+		await instance.start();
+		await flush();
+		const result = await instance.save();
+
+		expect(net.calls.filter((call) => call.method === 'POST')).toHaveLength(2);
+		expect(result.retryable).toBe(true);
+	});
+});
+
+describe('dirty state (§2.5)', () => {
+	it('flags the instance on the first change and releases the guard after a save', async () => {
+		const remove = vi.spyOn(window, 'removeEventListener');
+		const net = createNet({post: () => ({ok: true, status: 200, data: {status: 'ok', content: '<p>s</p>'}})});
+		const element = mount('article-content', '<p>page</p>');
+		const instance = createInstance(element, {saveUrl: '/api/article'}, {net});
+
+		await instance.start();
+		await flush();
+		const editor = window.CKEDITOR.instances['article-content'];
+		editor.fire('change');
+
+		expect(events.of('change')).toHaveLength(1);
+		expect(events.of('change')[0].detail.dirty).toBe(true);
+
+		await instance.save();
+
+		expect(remove.mock.calls.filter(([name]) => name === 'beforeunload')).toHaveLength(1);
+	});
+
+	it('does not treat a programmatic setData as an edit', async () => {
+		const net = createNet({});
+		const element = mount('article-content', '<p>page</p>');
+		const instance = createInstance(element, {saveUrl: '/api/article'}, {net});
+
+		await instance.start();
+		await flush();
+		window.CKEDITOR.instances['article-content'].setData('<p>set programmatically</p>');
+
+		const result = await instance.stop();
+		await flush();
+
+		expect(net.calls.filter((call) => call.method === 'POST')).toHaveLength(0);
+		expect(result).toEqual({saved: false, dirty: false, content: null});
+	});
+});
+
+describe('lastSaved (D23)', () => {
+	it('keeps the last server-confirmed content after a fatal save', async () => {
+		let attempt = 0;
+		const net = createNet({
+			post() {
+				attempt += 1;
+				if (attempt <= 2) {
+					return {ok: true, status: 200, data: {status: 'ok', content: '<p>v' + attempt + '</p>'}};
+				}
+				return {ok: false, status: 413, data: {status: 'ko', message: 'Content too large'}};
+			},
+		});
+		const element = mount('article-content', '<p>page</p>');
+		const instance = createInstance(element, {saveUrl: '/api/article'}, {net});
+
+		await instance.start();
+		await flush();
+		await instance.save();
+		await instance.save();
+		await instance.save();
+
+		expect(instance.getLastSaved().content).toBe('<p>v2</p>');
+		expect(instance.isStarted()).toBe(false);
+		expect(element.innerHTML).toBe('<p>v2</p>');
+	});
+});
