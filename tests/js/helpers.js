@@ -38,7 +38,6 @@ export const BASE_OPTIONS = {
 	components: {
 		enabled: false,
 		allowlist: [],
-		reportOnly: false,
 	},
 	translations: {},
 	translateUrl: null,

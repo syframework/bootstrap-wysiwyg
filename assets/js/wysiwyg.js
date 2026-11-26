@@ -74,8 +74,7 @@
 		removePlugins: [],
 		components: {
 			enabled: false,
-			allowlist: [],
-			reportOnly: false
+			allowlist: []
 		},
 		translations: {},
 		translateUrl: null,

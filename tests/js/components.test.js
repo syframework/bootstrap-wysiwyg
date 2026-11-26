@@ -26,7 +26,7 @@ async function startWith(overrides, element = mount()) {
 describe('registerPlugins', () => {
 	it('registers only the enabled sy* plugins, from assets.plugins', async () => {
 		await startWith({
-			components: {enabled: true, allowlist: ['MAP'], reportOnly: false},
+			components: {enabled: true, allowlist: ['MAP']},
 			extraPlugins: ['sycomponent', 'sytranslate', 'tableresize'],
 			assets: {
 				engine: '/assets/js/wysiwyg.js',
@@ -104,7 +104,7 @@ describe('components', () => {
 		});
 		const instance = createInstance(element, {
 			loadUrl: '/api/article',
-			components: {enabled: true, allowlist: ['A'], reportOnly: false},
+			components: {enabled: true, allowlist: ['A']},
 			extraPlugins: ['sycomponent'],
 			assets: {
 				engine: '/assets/js/wysiwyg.js',
@@ -118,7 +118,7 @@ describe('components', () => {
 		await flush();
 
 		expect(element.innerHTML).toContain('{SLOT}');
-		expect(window.CKEDITOR.__calls[0].config.components).toEqual({enabled: true, allowlist: ['A'], reportOnly: false});
+		expect(window.CKEDITOR.__calls[0].config.components).toEqual({enabled: true, allowlist: ['A']});
 		expect(window.CKEDITOR.__calls[0].config.syComponentSlots).toEqual({'A\n{}': '{SLOT}'});
 		expect(window.CKEDITOR.__calls[0].config.syRenderedComponents).toEqual({'A\n{}': '<span>rendered</span>'});
 	});
