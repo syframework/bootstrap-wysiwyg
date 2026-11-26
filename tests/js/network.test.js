@@ -223,3 +223,126 @@ describe('error classification', () => {
 		expect(element.innerHTML).toBe('<p>server</p>');
 	});
 });
+
+describe('error classes (§2.6)', () => {
+	it('keeps the editor open on a network failure (status 0)', async () => {
+		const {instance, editor} = await started(
+			{saveUrl: '/api/article'},
+			{post: () => Promise.reject(new Error('offline'))},
+		);
+
+		editor.setData('<p>edited</p>');
+		const result = await instance.save();
+
+		expect(result.status).toBe(0);
+		expect(result.retryable).toBe(true);
+		expect(instance.isStarted()).toBe(true);
+	});
+
+	it('keeps the editor open on a 5xx even when the body says "ko"', async () => {
+		const {instance, editor} = await started(
+			{saveUrl: '/api/article'},
+			{post: () => ({ok: false, status: 503, data: {status: 'ko', message: 'Down'}})},
+		);
+
+		editor.setData('<p>edited</p>');
+		const result = await instance.save();
+
+		expect(result.retryable).toBe(true);
+		expect(instance.isStarted()).toBe(true);
+	});
+
+	it('keeps the editor open on a 429 (retryable)', async () => {
+		const {instance, editor} = await started(
+			{saveUrl: '/api/article'},
+			{post: () => ({ok: false, status: 429, data: {status: 'ko', message: 'Too many requests'}})},
+		);
+
+		editor.setData('<p>edited</p>');
+		const result = await instance.save();
+
+		expect(result.retryable).toBe(true);
+		expect(instance.isStarted()).toBe(true);
+	});
+
+	it('destroys and restores the last saved content on a 400', async () => {
+		let attempt = 0;
+		const {element, instance} = await started(
+			{saveUrl: '/api/article'},
+			{
+				post() {
+					attempt += 1;
+					return attempt === 1
+						? {ok: true, status: 200, data: {status: 'ok', content: '<p>server</p>'}}
+						: {ok: false, status: 400, data: {status: 'ko', message: 'Content is not valid UTF-8'}};
+				},
+			},
+		);
+
+		await instance.save();
+		const result = await instance.save();
+
+		expect(result.retryable).toBe(false);
+		expect(instance.isStarted()).toBe(false);
+		expect(element.innerHTML).toBe('<p>server</p>');
+	});
+
+	it('destroys and restores on a 404', async () => {
+		const {element, instance} = await started(
+			{saveUrl: '/api/article'},
+			{post: () => ({ok: false, status: 404, data: {status: 'ko', message: 'Not found'}})},
+		);
+
+		const result = await instance.save();
+
+		expect(result.retryable).toBe(false);
+		expect(instance.isStarted()).toBe(false);
+		expect(element.innerHTML).toBe('<p>initial</p>');
+	});
+
+	it('destroys and restores on status "ko" without a fresh csrf', async () => {
+		const {element, instance} = await started(
+			{saveUrl: '/api/article'},
+			{post: () => ({ok: false, status: 409, data: {status: 'ko', message: 'Conflict'}})},
+		);
+
+		const result = await instance.save();
+
+		expect(result.retryable).toBe(false);
+		expect(instance.isStarted()).toBe(false);
+		expect(element.innerHTML).toBe('<p>initial</p>');
+	});
+
+	it('treats an unparsable body as fatal, even on a 2xx', async () => {
+		let attempt = 0;
+		vi.stubGlobal('fetch', vi.fn(async () => {
+			attempt += 1;
+			return {
+				ok: true,
+				status: 200,
+				text: async () => (attempt === 1
+					? JSON.stringify({status: 'ok', content: '<p>server</p>'})
+					: '<html>proxy error</html>'),
+			};
+		}));
+
+		const errors = [];
+		document.addEventListener('wysiwyg:error', (event) => errors.push(event.detail));
+
+		const element = mount('article-content', '<p>initial</p>');
+		const instance = createInstance(element, {saveUrl: '/api/article'});
+		await instance.start();
+		await flush();
+
+		await instance.save();
+		expect(instance.getLastSaved().content).toBe('<p>server</p>');
+
+		const result = await instance.save();
+
+		expect(result.retryable).toBe(false);
+		expect(instance.isStarted()).toBe(false);
+		expect(element.innerHTML).toBe('<p>server</p>');
+		expect(errors[0].message).toBe('Invalid JSON response');
+		expect(errors[0].retryable).toBe(false);
+	});
+});

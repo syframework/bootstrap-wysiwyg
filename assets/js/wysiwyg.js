@@ -18,6 +18,9 @@
  *   - the POST body is `content`, `csrf`, then `save-data`. The engine adds no
  *     fixed `id`: business identity belongs to `save-data`.
  *   - one global `beforeunload` listener serves every dirty instance.
+ *   - `§2.6` error classes: network/5xx/429 stay retryable and keep the editor
+ *     open; 400/403/404/413, `status:"ko"` without a fresh csrf, and an
+ *     unparsable JSON body restore `lastSaved` and tear the editor down.
  */
 (function (global) {
 	'use strict';
@@ -462,14 +465,19 @@
 		return global.fetch(url, init).then(function (response) {
 			return response.text().then(function (text) {
 				var data = null;
+				// An empty body is tolerated (some proxies drop it); a body that
+				// is not JSON is not, and must never be mistaken for a success
+				// (§2.6: "JSON invalide" is fatal, no silent loss).
+				var invalid = false;
 				if (text) {
 					try {
 						data = JSON.parse(text);
 					} catch (error) {
 						data = null;
+						invalid = true;
 					}
 				}
-				return {ok: response.ok, status: response.status, data: data};
+				return {ok: response.ok, status: response.status, data: data, invalid: invalid};
 			});
 		});
 	}
@@ -869,6 +877,15 @@
 
 					if (data && data.csrf) csrf = data.csrf;
 
+					// A 2xx with an unparsable body is not a save: keeping the
+					// editor open would pretend the content reached the server.
+					if (response.invalid) {
+						restore();
+						teardownEditor();
+						fail(response.status, 'Invalid JSON response', false, false);
+						return {ok: false, status: response.status, data: null, retryable: false};
+					}
+
 					if (response.ok && (!data || data.status === 'ok')) {
 						if (data && data.content !== undefined && data.content !== null && data.html !== undefined) {
 							// `content` wins over its `html` alias (§2.4); a
@@ -920,6 +937,10 @@
 		/** 4xx that no retry can fix; 429 and 5xx stay retryable (§2.6). */
 		function isFatal(status, data) {
 			if (status === 400 || status === 403 || status === 404 || status === 413) return true;
+			// The status wins for back-pressure and server failures: a `ko` body
+			// must not turn a 429 (or a 5xx) into a destructive error, or the
+			// unsaved content of a rate-limited user would be thrown away.
+			if (status === 429 || status >= 500) return false;
 			return !!(data && data.status === 'ko' && !data.csrf);
 		}
 
