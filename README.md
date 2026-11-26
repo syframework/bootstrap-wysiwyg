@@ -25,6 +25,27 @@ so the browser needs network access unless a project sets `CKEDITOR_JS`.
 composer require sy/bootstrap-wysiwyg
 ```
 
+### Assets
+
+Two files must be reachable from the public directory, at the path
+`Wysiwyg\Lib\EditorAssets::engine()` and `::plugins()` return (by default
+`/assets/js/wysiwyg.js` and `/assets/js/plugins`):
+
+```bash
+cp vendor/sy/bootstrap-wysiwyg/assets/js/wysiwyg.js <public>/assets/js/wysiwyg.js
+cp -r vendor/sy/bootstrap-wysiwyg/assets/js/plugins <public>/assets/js/
+```
+
+A `sy/project 7.0.0` application does this itself: its Composer hooks
+(`Project\Composer\Installer::postPackages`) copy the assets of every installed
+`sy/*` plugin on `composer install`/`update`. An existing application that
+predates those hooks must copy them once, and again after every upgrade of this
+package.
+
+When the engine asset is missing, the browser console reports
+`SyWysiwyg engine is not loaded: check assets.engine` and the editor stays
+inactive — the page itself keeps working.
+
 ## Usage
 
 ```php
