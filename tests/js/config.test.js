@@ -227,6 +227,79 @@ describe('buildConfig — uploads', () => {
 	});
 });
 
+describe('buildConfig — plugin buttons', () => {
+	it('appends the button of a loaded plugin the consumer forgot', async () => {
+		const config = await resolvedConfig({
+			extraPlugins: ['sycomponent'],
+			config: {toolbar: [{name: 'document', items: ['Sourcedialog']}, {name: 'insert', items: ['Image']}]},
+		});
+
+		expect(config.toolbar[1].items).toEqual(['Image', 'Sycomponent']);
+		expect(config.toolbar[0].items).toEqual(['Sourcedialog']);
+	});
+
+	it('appends every missing plugin button once, in order', async () => {
+		const config = await resolvedConfig({
+			extraPlugins: ['sytranslate', 'sycomponent'],
+			config: {toolbar: [{name: 'insert', items: ['Image']}]},
+		});
+
+		expect(config.toolbar[0].items).toEqual(['Image', 'Sycomponent', 'Sytranslate']);
+	});
+
+	it('keeps an item the consumer already lists', async () => {
+		const config = await resolvedConfig({
+			extraPlugins: ['sycomponent'],
+			config: {toolbar: [{name: 'insert', items: ['Sycomponent', 'Image']}]},
+		});
+
+		expect(config.toolbar[0].items).toEqual(['Sycomponent', 'Image']);
+	});
+
+	it('does not duplicate an item listed in another group', async () => {
+		const config = await resolvedConfig({
+			extraPlugins: ['sytranslate'],
+			config: {toolbar: [{name: 'document', items: ['Sytranslate']}, {name: 'insert', items: ['Image']}]},
+		});
+
+		expect(config.toolbar[0].items).toEqual(['Sytranslate']);
+		expect(config.toolbar[1].items).toEqual(['Image']);
+	});
+
+	it('inserts before a trailing separator', async () => {
+		const config = await resolvedConfig({
+			extraPlugins: ['sycomponent'],
+			config: {toolbar: [{name: 'insert', items: ['Image', '-']}]},
+		});
+
+		expect(config.toolbar[0].items).toEqual(['Image', 'Sycomponent', '-']);
+	});
+
+	it('ignores a plugin that is not loaded', async () => {
+		const config = await resolvedConfig({config: {toolbar: [{name: 'insert', items: ['Image']}]}});
+
+		expect(config.toolbar[0].items).toEqual(['Image']);
+	});
+
+	it('never rewrites a flat toolbar', async () => {
+		const config = await resolvedConfig({
+			extraPlugins: ['sycomponent'],
+			config: {toolbar: [['Bold', 'Italic']]},
+		});
+
+		expect(config.toolbar).toEqual([['Bold', 'Italic']]);
+	});
+
+	it('creates an insert group when the toolbar has none', async () => {
+		const config = await resolvedConfig({
+			extraPlugins: ['sycomponent'],
+			config: {toolbar: []},
+		});
+
+		expect(config.toolbar).toEqual([{name: 'insert', items: ['Sycomponent']}]);
+	});
+});
+
 function hasJsonFlag(url) {
 	if (!url) return false;
 	return new URL(url, 'http://localhost').searchParams.has('json');

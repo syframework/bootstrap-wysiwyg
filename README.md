@@ -225,8 +225,11 @@ Two consumer plugins ship with the engine and are activated by listing them in
   `config.translateUrl` receives the POST (`key`, `value`, and `lang` when
   `config.translate-lang` is set, otherwise the server derives the language from
   the request), and `config.translateLabels` overrides the dialog labels
-  (`language`, `key`, `value`, `add`). The toolbar icon is the local
-  `sytranslate.svg`.
+  (`language`, `key`, `value`, `add`). The toolbar icon is the systemuicons
+  **translate** glyph (`https://www.systemuicons.com/images/icons/translate.svg`),
+  shipped locally as `sytranslate.svg` and normalised to 16×16 with the same
+  1.5 px stroke as the other plugin icons; `config.syTranslateIcon` overrides the
+  URL when a project must point at its own copy.
 - `assets/js/plugins/sywidget.js` — preserves `data-sylock` markup. With
   `data-sylock="attributes"` the widget snapshots the element attributes into
   `data-sylock-attributes` while editing and restores them on downcast, so the
@@ -236,6 +239,14 @@ Two consumer plugins ship with the engine and are activated by listing them in
 Both plugins are registered through `CKEDITOR.plugins.addExternal` before the
 editor is created, whether or not the component feature is enabled: the guard is
 `assets.plugins`, and `extra-plugins` decides which files are requested.
+
+A loaded plugin must expose its button, so the engine appends `Sycomponent` and
+`Sytranslate` to the `insert` group when the consumer toolbar omits the item
+(`buildConfig`). An item already listed — in any group — is never duplicated, and
+a flat toolbar (`configType: 'array'`, e.g. `[['Bold']]`) is left untouched
+because it cannot host a group object. The consumer toolbar stays authoritative
+for placement; this only prevents an unreachable dialog when `extra-plugins`
+enables a plugin the toolbar forgot.
 
 ### Adapter-loaded source (CMS)
 

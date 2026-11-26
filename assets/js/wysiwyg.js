@@ -315,6 +315,7 @@
 		if (extra) config.extraPlugins = extra;
 		var removed = csv(config.removePlugins, options.removePlugins);
 		if (removed) config.removePlugins = removed;
+		ensurePluginButtons(config, extra);
 
 		// 3. templates: only when the consumer did not set them.
 		if (!config.templates && options.templates) {
@@ -353,6 +354,72 @@
 		}
 
 		return config;
+	}
+
+	/**
+	 * Plugins that own a toolbar button, mapped to their CKEditor item name.
+	 *
+	 * `sycomponent` and `sytranslate` register their button from the plugin, but
+	 * CKEditor only renders it when the item reaches the toolbar: a consumer that
+	 * loads the plugin and forgets the item gets an unreachable dialog (§2.1).
+	 */
+	var PLUGIN_BUTTONS = {sycomponent: 'Sycomponent', sytranslate: 'Sytranslate'};
+
+	/**
+	 * Append the button of every loaded plugin to the toolbar.
+	 *
+	 * The consumer toolbar stays authoritative: an item that is already listed,
+	 * in any group, is left untouched, and a flat (`[['Bold']]`) toolbar is never
+	 * rewritten. The item is appended to the `insert` group, or to the last group
+	 * that has an `items` list, before a trailing separator.
+	 */
+	function ensurePluginButtons(config, extra) {
+		if (!Array.isArray(config.toolbar)) return;
+
+		var loaded = typeof extra === 'string' && extra !== '' ? extra.split(',') : [];
+		if (!loaded.length) return;
+
+		var present = {};
+		var target = null;
+		var grouped = false;
+		config.toolbar.forEach(function (group) {
+			if (!group || typeof group !== 'object' || Array.isArray(group) || !Array.isArray(group.items)) return;
+			grouped = true;
+			if (group.name === 'insert') target = group;
+			group.items.forEach(function (item) {
+				if (typeof item === 'string' && item !== '' && item !== '-') present[item] = true;
+			});
+		});
+
+		// A flat toolbar (`[['Bold']]`, configType "array") cannot host a group
+		// object: it is left untouched rather than corrupted.
+		if (config.toolbar.length > 0 && !grouped) return;
+
+		var missing = [];
+		Object.keys(PLUGIN_BUTTONS).forEach(function (plugin) {
+			if (loaded.indexOf(plugin) === -1) return;
+			if (has(present, PLUGIN_BUTTONS[plugin])) return;
+			missing.push(PLUGIN_BUTTONS[plugin]);
+		});
+		if (!missing.length) return;
+
+		if (!target) {
+			for (var i = config.toolbar.length - 1; i >= 0; i--) {
+				var group = config.toolbar[i];
+				if (group && typeof group === 'object' && Array.isArray(group.items)) {
+					target = group;
+					break;
+				}
+			}
+		}
+		if (!target) {
+			target = {name: 'insert', items: []};
+			config.toolbar.push(target);
+		}
+
+		var at = target.items.length;
+		while (at > 0 && target.items[at - 1] === '-') at--;
+		target.items.splice.apply(target.items, [at, 0].concat(missing));
 	}
 
 	/** D19 bis: mutate `CKEDITOR.dtd` after CKEditor loaded, before init. */
