@@ -100,12 +100,32 @@ function widgetElement(attributes, text) {
 	};
 }
 
+/** Answer the translation POST with the given status and body. */
+function stubFetch(response = {}) {
+	vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+		ok: response.ok !== false,
+		status: response.status === undefined ? 200 : response.status,
+		text: () => Promise.resolve(response.body === undefined ? '{"status":"ok"}' : response.body),
+	})));
+}
+
+/** Let the fetch → text() → then chain settle before asserting. */
+function microtasks() {
+	return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+let alertSpy;
+
 beforeEach(() => {
-	vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ok: true, json: () => Promise.resolve({})})));
+	stubFetch();
+	alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+	vi.spyOn(window.console, 'error').mockImplementation(() => {});
+	vi.spyOn(window.console, 'warn').mockImplementation(() => {});
 });
 
 afterEach(() => {
 	vi.unstubAllGlobals();
+	vi.restoreAllMocks();
 	delete window.CKEDITOR;
 });
 
@@ -238,6 +258,42 @@ describe('sytranslate — insertion', () => {
 		});
 
 		expect(editor.inserted).toEqual(['{"ab"}']);
+	});
+
+	it('reports a server error instead of failing silently', async () => {
+		stubFetch({ok: false, status: 500, body: '{"message":"Database error"}'});
+		const {plugins, dialogs} = boot([sytranslateSource]);
+		const editor = fakeEditor({config: {translateUrl: '/api/content-translation'}});
+
+		plugins.sytranslate.init(editor);
+		dialogs.sytranslate(editor).onOk.call(dialogSelf());
+		await microtasks();
+
+		expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('HTTP 500'));
+		expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Database error'));
+	});
+
+	it('reports a refused request returned with status 200', async () => {
+		stubFetch({ok: true, status: 200, body: '{"status":"ko","message":"Permission denied"}'});
+		const {plugins, dialogs} = boot([sytranslateSource]);
+		const editor = fakeEditor({config: {translateUrl: '/api/content-translation'}});
+
+		plugins.sytranslate.init(editor);
+		dialogs.sytranslate(editor).onOk.call(dialogSelf());
+		await microtasks();
+
+		expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Permission denied'));
+	});
+
+	it('stays silent when the endpoint accepts the value', async () => {
+		const {plugins, dialogs} = boot([sytranslateSource]);
+		const editor = fakeEditor({config: {translateUrl: '/api/content-translation'}});
+
+		plugins.sytranslate.init(editor);
+		dialogs.sytranslate(editor).onOk.call(dialogSelf());
+		await microtasks();
+
+		expect(alertSpy).not.toHaveBeenCalled();
 	});
 
 	it('does not call the endpoint without a translate url', () => {

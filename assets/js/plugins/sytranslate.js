@@ -56,9 +56,34 @@
 		return null;
 	}
 
+	/** A translation failure must be visible: the slot looks saved otherwise. */
+	function report(editor, message) {
+		if (window.console && window.console.error) {
+			window.console.error('SyWysiwyg sytranslate:', message);
+		}
+		if (typeof window.alert === 'function') {
+			window.alert('SyWysiwyg sytranslate: ' + message);
+		}
+	}
+
+	/**
+	 * Persist the key/value pair.
+	 *
+	 * The endpoint is optional: a consumer without a translation table (Place)
+	 * lets the project translator resolve `{"key"}` at render time. In that case
+	 * the value is a local display only, and the console says so once.
+	 */
 	function save(editor, key, value) {
 		var url = editor.config.translateUrl;
-		if (typeof url !== 'string' || url === '') return;
+		if (typeof url !== 'string' || url === '') {
+			if (!editor._sytranslateNoUrl) {
+				editor._sytranslateNoUrl = true;
+				if (window.console && window.console.warn) {
+					window.console.warn('SyWysiwyg sytranslate: no translateUrl configured, the value is not persisted');
+				}
+			}
+			return Promise.resolve(null);
+		}
 
 		var body = new URLSearchParams();
 		body.append('key', key);
@@ -67,18 +92,31 @@
 			body.append('lang', editor.config.translateLang);
 		}
 
-		fetch(url, {
+		return fetch(url, {
 			method: 'POST',
 			credentials: 'same-origin',
 			headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
 			body: body.toString()
 		}).then(function (response) {
-			if (!response.ok) throw new Error('Translation request failed');
-			return response.json();
+			// Read the body once: the framework answers `{message}` on 403/500
+			// and `{status: 'ko'}` on a refused request.
+			return response.text().then(function (text) {
+				var data = null;
+				try {
+					data = JSON.parse(text);
+				} catch (e) {}
+				if (!response.ok) {
+					throw new Error('HTTP ' + response.status
+						+ (data && data.message ? ' — ' + data.message : ''));
+				}
+				if (data && data.status === 'ko') {
+					throw new Error(data.message || 'translation refused by the endpoint');
+				}
+				return data;
+			});
 		}).catch(function (error) {
-			if (window.console && window.console.error) {
-				window.console.error('SyWysiwyg sytranslate:', error.message);
-			}
+			report(editor, error.message);
+			return null;
 		});
 	}
 
