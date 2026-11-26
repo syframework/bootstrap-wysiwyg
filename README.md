@@ -237,6 +237,23 @@ Both plugins are registered through `CKEDITOR.plugins.addExternal` before the
 editor is created, whether or not the component feature is enabled: the guard is
 `assets.plugins`, and `extra-plugins` decides which files are requested.
 
+### Adapter-loaded source (CMS)
+
+When the consumer loads the source itself (CMS iframe adapter, no `load-url`),
+it replaces the DOM with the source and passes the rendering captured before
+that replacement:
+
+```js
+instance.setRenderedComponents({ 'Sy\\Bootstrap\\Component\\Place\\Map': '<div>...</div>' });
+instance.start();
+```
+
+The keys are `data-sycomponent` + `data-sycomponent-args` (newline separated),
+the same key the `sycomponent` widget uses. The values win over the ones the
+engine could collect from the DOM, because the DOM now contains the `{SLOT}`
+source instead of the rendered component. Without that call the components are
+masked until the next page load.
+
 ## Upload extensions
 
 `Sy\Bootstrap\Wysiwyg\Lib\UploadPolicy` owns the server-side whitelist. The

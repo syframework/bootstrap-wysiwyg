@@ -700,6 +700,17 @@
 				}
 
 				var renderedComponents = collectRenderedComponents(originalHtml);
+				// An adapter that loads the source itself (CMS) captures the rendered
+				// components before replacing the DOM and passes them here.
+				if (opts.renderedComponents) {
+					Object.keys(opts.renderedComponents).forEach(function (key) {
+						// The adapter capture wins: the DOM now holds the source
+						// slots, so the collected values are `{SLOT}` placeholders.
+						if (typeof opts.renderedComponents[key] === 'string') {
+							renderedComponents[key] = opts.renderedComponents[key];
+						}
+					});
+				}
 				var componentSlots = collectComponentSlots(element, renderedComponents);
 				applyPreserveEmpty(opts);
 				registerPlugins(opts);
@@ -947,6 +958,21 @@
 			setData: function (html) {
 				if (editor) editor.setData(html);
 				resetDirty();
+			},
+			setRenderedComponents: function (map) {
+				if (!map || typeof map !== 'object') return;
+				var target = editor ? editor.config : null;
+				if (target) {
+					if (!target.syRenderedComponents) target.syRenderedComponents = {};
+					Object.keys(map).forEach(function (key) {
+						target.syRenderedComponents[key] = map[key];
+					});
+					return;
+				}
+				opts.renderedComponents = opts.renderedComponents || {};
+				Object.keys(map).forEach(function (key) {
+					opts.renderedComponents[key] = map[key];
+				});
 			},
 			getLastSaved: function () { return lastSaved; }
 		};

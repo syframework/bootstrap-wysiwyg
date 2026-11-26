@@ -74,6 +74,19 @@ describe('registerPlugins', () => {
 });
 
 describe('components', () => {
+	it('accepts rendered components from an adapter before start', async () => {
+		const element = mount('sy-content', '<div data-sycomponent="A">{SLOT}</div>');
+		const instance = createInstance(element, {}, {net: createNet({})});
+		instance.setRenderedComponents({A: '<strong>rendered</strong>'});
+
+		await instance.start();
+		await flush();
+
+		expect(instance.getEditor().config.syRenderedComponents).toEqual({
+			A: '<strong>rendered</strong>',
+		});
+	});
+
 	it('captures rendered components and stores their source slots', async () => {
 		const element = mount(
 			'article-content',
