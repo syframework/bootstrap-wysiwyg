@@ -198,7 +198,10 @@ a save. After an insertion or an edit, the plugin POSTs `component` and `args` t
 that URL and replaces the widget content with the returned `html`. The source
 slot is untouched, so the next save still serializes the slot. The endpoint must
 check the same-origin request, the consumer allowlist and the user permissions;
-Article implements it as `/editor/article/render`. Without a render URL, the
+the engine ships the endpoint as the `Sy\Bootstrap\Application\Editor\Render`
+trait, so a consumer only declares its language and translator directories
+(`renderLanguage()`, `renderTranslators()`); Article, CMS and any future plugin
+share the same implementation. Without a render URL, the
 widget keeps the `(save to render)` mask until the next page load.
 
 An existing component is edited with a double-click or the **Edit component**
