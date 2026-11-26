@@ -140,7 +140,9 @@ actions. The class lives in this package, so bootstrap's
 `Application::controllerClass()` resolves the route without knowing where the
 backend is implemented. Plugin classes stay in the consuming packages
 (`Sy\Bootstrap\Application\Editor\Article`, `...\Content`, `...\Place`) and use
-the `CkFile` trait from the same namespace.
+the `CkFile` trait from the same namespace. Browse deletes require the session
+CSRF token (`csrf`) in addition to the same-origin check; `browseAction()`
+rejects a missing or mismatched token before touching the file.
 
 ## Component filtering
 
