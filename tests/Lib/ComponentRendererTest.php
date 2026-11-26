@@ -6,6 +6,7 @@ use Sy\Bootstrap\Wysiwyg\Lib\ComponentRenderer;
 use Sy\Component\WebComponent;
 use Sy\Test\Fixtures\AssetComponent;
 use Sy\Test\Fixtures\RenderedComponent;
+use Sy\Test\Fixtures\TranslatedComponent;
 
 class ComponentRendererTest extends TestCase {
 
@@ -48,6 +49,16 @@ class ComponentRendererTest extends TestCase {
 
 		$this->assertSame($html, ComponentRenderer::render($html, [RenderedComponent::class]));
 		$this->assertStringContainsString('invalid arguments', (string) file_get_contents($this->logFile));
+	}
+
+	public function testContainerTranslatorsAreAvailableToComponents() {
+		$html      = '<div data-sycomponent="Sy\\Test\\Fixtures\\TranslatedComponent">{SLOT}</div>';
+		$container = new WebComponent();
+		$container->addTranslator(__DIR__ . '/../Fixtures/lang', 'php', 'fr');
+		$out = ComponentRenderer::render($html, [TranslatedComponent::class], $container);
+
+		$this->assertStringContainsString('Composant traduit', $out);
+		$this->assertStringNotContainsString('component.label', $out);
 	}
 
 	public function testComponentAssetsAreMerged() {

@@ -50,6 +50,14 @@ class ComponentRenderer {
 				continue;
 			}
 
+			if ($container !== null and $component instanceof WebComponent) {
+				// Mirror Component::setVar(): the component inherits the
+				// consumer translators. Attaching it to the container would
+				// also work, but the source slot could collide with the
+				// consumer's template variables.
+				$component->addTranslators($container->getTranslators());
+			}
+
 			$rendered = (string) $component;
 			while ($element->firstChild) $element->removeChild($element->firstChild);
 			foreach (iterator_to_array($html5->loadHTMLFragment($rendered)->childNodes) as $child) {

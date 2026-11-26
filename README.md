@@ -169,7 +169,9 @@ default is never removed, so the security baseline remains.
 allowlisted components, replaces the placeholder by their output and merges
 their CSS/JS assets. The `data-sycomponent` wrapper is kept, so the component is
 rebuilt on the next render even if `HtmlSanitizer` removed its form controls on
-save.
+save. The renderer also passes the consumer translators to each component before
+rendering, so form labels and component strings follow the page language; it
+uses `addTranslators()` rather than `setVar()` to avoid source-slot collisions.
 
 `assets/js/plugins/sycomponent.js` masks the rendered component while editing.
 The engine passes the source slots through `config.syComponentSlots` and the
