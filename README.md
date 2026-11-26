@@ -209,9 +209,12 @@ present in the allowlist; a widget whose component was removed shows a localized
 notice and is left untouched. The toolbar icon is the cube SVG at
 `assets/js/plugins/sycomponent.svg`, copied next to the plugin file.
 
-The plugin ships `lang/en.js` and `lang/fr.js`; CKEditor loads the file that
-matches `config.language`, so the consumer can align the dialog with the user's
-interface language. The Article consumer uses the connected user's `language`
+The plugins ship `lang/en.js` and `lang/fr.js` (`sycomponent` and `sytranslate`
+namespaces); CKEditor loads the file that matches `config.language`, so the
+consumer can align the dialog with the user's interface language. A plugin must
+declare `lang` for CKEditor to fetch the file. `sycomponent` only masks its own
+widget instances: `widgets.instanceCreated` fires for every widget of the
+editor, so the handler filters on `widget.name`. The Article consumer uses the connected user's `language`
 when available and falls back to the display language for guests.
 
 ### Translation and locked-widget plugins
@@ -221,11 +224,18 @@ Two consumer plugins ship with the engine and are activated by listing them in
 
 - `assets/js/plugins/sytranslate.js` — inline translation widget for the CMS. It
   keeps the `{"key"}` placeholder in the saved source and displays the current
-  value while editing. `config.translations` holds the key → value map,
-  `config.translateUrl` receives the POST (`key`, `value`, and `lang` when
+  value while editing. The toolbar button opens the dialog with no widget
+  binding, which inserts a new slot at the selection (the placeholder text is
+  what the data filter wraps into a widget, so the downcast is unchanged); a
+  double-click on an existing slot edits it instead. `config.translations`
+  holds the key → value map, `config.translateUrl` receives the POST (`key`,
+  `value`, and `lang` when
   `config.translate-lang` is set, otherwise the server derives the language from
   the request), and `config.translateLabels` overrides the dialog labels
-  (`language`, `key`, `value`, `add`). The toolbar icon is the systemuicons
+  (`language`, `key`, `value`, `add`). Labels resolve consumer config first,
+  then the plugin language pack (`lang/en.js`, `lang/fr.js`, selected by
+  `config.language`), then the built-in English defaults, so a consumer that
+  passes no labels still gets a localised dialog. The toolbar icon is the systemuicons
   **translate** glyph (`https://www.systemuicons.com/images/icons/translate.svg`),
   shipped locally as `sytranslate.svg` and normalised to 16×16 with the same
   1.5 px stroke as the other plugin icons; `config.syTranslateIcon` overrides the
