@@ -20,12 +20,24 @@
 		add: 'Translation'
 	};
 
+	/**
+	 * Dialog labels: the consumer overrides (`translate-labels`) win, then the
+	 * CKEditor language pack loaded from `lang/<code>.js`, then the built-in
+	 * English defaults. Without the language pack, a consumer that passes no
+	 * labels (Place) kept an English dialog on a French editor.
+	 */
 	function labels(editor) {
 		var provided = editor.config.translateLabels;
+		var pack = editor.lang && editor.lang.sytranslate ? editor.lang.sytranslate : {};
 		var result = {};
 		if (!provided || typeof provided !== 'object' || Array.isArray(provided)) provided = {};
 		Object.keys(DEFAULTS).forEach(function (name) {
 			var value = provided[name];
+			if (typeof value === 'string' && value !== '') {
+				result[name] = value;
+				return;
+			}
+			value = pack[name];
 			result[name] = typeof value === 'string' && value !== '' ? value : DEFAULTS[name];
 		});
 		return result;
@@ -70,6 +82,31 @@
 		});
 	}
 
+	/**
+	 * Insert a new slot at the selection.
+	 *
+	 * The placeholder text is what the data filter wraps into a widget, so the
+	 * saved source stays `{\"key\"}` (the server resolves it) and the downcast
+	 * never serializes the display value.
+	 */
+	function insert(editor, key, value) {
+		var clean = String(key === null || typeof key === 'undefined' ? '' : key).replace(/[{}"]/g, '').trim();
+		if (clean === '') return;
+
+		editor.insertHtml('{\"' + clean + '\"}');
+		if (editor.widgets && typeof editor.widgets.checkWidgets === 'function') {
+			editor.widgets.checkWidgets();
+		}
+
+		var instances = (editor.widgets && editor.widgets.instances) || {};
+		Object.keys(instances).forEach(function (id) {
+			var widget = instances[id];
+			if (!widget || widget.name !== 'sytranslate') return;
+			if (!widget.data || widget.data.name !== clean) return;
+			widget.setData('value', value);
+		});
+	}
+
 	CKEDITOR.dialog.add('sytranslate', function (editor) {
 		var text = labels(editor);
 
@@ -88,6 +125,10 @@
 						'default': '',
 						required: true,
 						setup: function (widget) {
+							// Only called when the dialog edits an existing widget: the
+							// toolbar button opens it with no binding, which means
+							// "insert a new slot".
+							editor._sytranslateWidget = widget;
 							this.setValue(widget.data.name);
 						},
 						commit: function (widget) {
@@ -114,13 +155,22 @@
 				]
 			}],
 			onOk: function () {
-				save(editor, this.getValueOf('info', 'key'), this.getValueOf('info', 'value'));
+				var key = this.getValueOf('info', 'key');
+				var value = this.getValueOf('info', 'value');
+				var widget = editor._sytranslateWidget;
+				editor._sytranslateWidget = null;
+
+				save(editor, key, value);
+				// A widget dialog commits the data itself; an insertion has to
+				// create the slot, otherwise the typed values are lost.
+				if (!widget) insert(editor, key, value);
 			}
 		};
 	});
 
 	CKEDITOR.plugins.add('sytranslate', {
 		requires: 'widget,dialog',
+		lang: 'en,fr',
 
 		onLoad: function () {
 			// Placeholder frame, kept from the CMS implementation.
@@ -158,6 +208,15 @@
 				},
 
 				mask: true
+			});
+
+			// The button needs a command: without it, CKEditor renders the button
+			// and does nothing on click.
+			editor.addCommand('sytranslate', {
+				exec: function () {
+					editor._sytranslateWidget = null;
+					editor.openDialog('sytranslate');
+				}
 			});
 
 			var button = {

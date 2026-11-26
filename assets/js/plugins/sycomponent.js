@@ -493,6 +493,10 @@
 		init: function (editor) {
 			function inject(widget) {
 				if (!widget || !widget.element || !widget.element.$) return;
+				// `instanceCreated` fires for every widget of the editor: masking a
+				// sytranslate or sywidget instance would replace its content with
+				// the component placeholder.
+				if (widget.name !== 'sycomponent') return;
 
 				var key = elementKey(widget.element);
 				var rendered = (editor.config.syRenderedComponents || {})[key];

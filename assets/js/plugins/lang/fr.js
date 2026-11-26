@@ -23,3 +23,10 @@ CKEDITOR.plugins.setLang('sycomponent', 'fr', {
 	componentFallback: 'Composant',
 	componentNotAllowed: "Ce composant n’est plus disponible."
 });
+
+CKEDITOR.plugins.setLang('sytranslate', 'fr', {
+	language: 'Traduction',
+	key: 'Identifiant de traduction',
+	value: 'Valeur de traduction',
+	add: 'Insérer un slot de traduction'
+});
