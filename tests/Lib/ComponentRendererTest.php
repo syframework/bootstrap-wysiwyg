@@ -31,6 +31,14 @@ class ComponentRendererTest extends TestCase {
 		$this->assertStringNotContainsString('{SLOT}', $out);
 	}
 
+	public function testEmptySlotIsRenderedToo() {
+		$html = '<div data-sycomponent="Sy\\Test\\Fixtures\\RenderedComponent" data-sycomponent-args="{&quot;text&quot;:&quot;Hello&quot;}"></div>';
+		$out  = ComponentRenderer::render($html, [RenderedComponent::class]);
+
+		$this->assertStringContainsString('<span class="fixture">Hello</span>', $out);
+		$this->assertStringContainsString('data-sycomponent=', $out);
+	}
+
 	public function testLeadingBackslashInMarkerIsAccepted() {
 		$html = '<div data-sycomponent="\\Sy\\Test\\Fixtures\\RenderedComponent">{SLOT}</div>';
 		$out  = ComponentRenderer::render($html, [RenderedComponent::class]);

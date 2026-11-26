@@ -39,6 +39,28 @@ describe('buildConfig — consumer config', () => {
 		expect(config.entities).toBe(false);
 	});
 
+	it('forwards every CKEditor option the consumer sets', async () => {
+		// The option names come straight from CKEditor 4: case and type must
+		// survive the PHP mapping and `buildConfig`.
+		const options = {
+			removeButtons: 'Source,-,Bold',
+			extraAllowedContent: 'div[data-x]',
+			format_tags: 'p;h2;h3',
+			justifyClasses: ['text-left', 'text-right'],
+			disallowedContent: 'script; *[on*]',
+			title: false,
+			entities: false,
+			startupFocus: true,
+			clipboard_handleImages: false,
+		};
+
+		const config = await resolvedConfig({config: options});
+
+		Object.keys(options).forEach((key) => {
+			expect(config[key]).toEqual(options[key]);
+		});
+	});
+
 	it('does not invent a toolbar from the options', async () => {
 		const config = await resolvedConfig();
 

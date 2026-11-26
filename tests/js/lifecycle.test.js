@@ -489,3 +489,43 @@ describe('lastSaved (D23)', () => {
 		expect(element.innerHTML).toBe('<p>v2</p>');
 	});
 });
+
+describe('resource hygiene (§3.5)', () => {
+	it('never installs a MutationObserver', async () => {
+		const observer = vi.fn();
+		const original = window.MutationObserver;
+		window.MutationObserver = observer;
+		try {
+			const element = mount('article-content', '<p>page</p>');
+			const instance = createInstance(element, {saveUrl: '/api/article'}, {net: createNet({})});
+			await instance.start();
+			await flush();
+			const editor = window.CKEDITOR.instances['article-content'];
+			editor.fire('change');
+			await instance.save();
+			instance.destroy();
+			await flush();
+
+			expect(observer).not.toHaveBeenCalled();
+		} finally {
+			window.MutationObserver = original;
+		}
+	});
+
+	it('adds only the global beforeunload listener', async () => {
+		const onDocument = vi.spyOn(document, 'addEventListener');
+		const onWindow = vi.spyOn(window, 'addEventListener');
+
+		const element = mount('article-content', '<p>page</p>');
+		const instance = createInstance(element, {saveUrl: '/api/article'}, {net: createNet({})});
+		await instance.start();
+		await flush();
+		window.CKEDITOR.instances['article-content'].fire('change');
+		await instance.save();
+		instance.destroy();
+		await flush();
+
+		expect(onDocument.mock.calls).toHaveLength(0);
+		expect(onWindow.mock.calls.filter(([name]) => name === 'beforeunload')).toHaveLength(1);
+	});
+});

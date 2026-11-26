@@ -89,6 +89,14 @@ class ComponentFilterTest extends TestCase {
 		$this->assertSame($html, ComponentFilter::sanitize($html, []));
 	}
 
+	public function testInvalidHtmlDoesNotBreakTheFilter() {
+		$html = '<div data-sycomponent="Unknown\\Class"><p>unclosed';
+		$out  = ComponentFilter::sanitize($html, ['Allowed\\One']);
+
+		$this->assertStringContainsString('unclosed', $out);
+		$this->assertStringNotContainsString('data-sycomponent', $out);
+	}
+
 	public function testEmptyAllowlistDeniesEveryComponent() {
 		// Article has no server-side component: everything must be neutralized
 		$this->assertSame('texte', ComponentFilter::sanitize('<div data-sycomponent="A">texte</div>', []));

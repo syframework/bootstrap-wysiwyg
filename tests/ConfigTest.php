@@ -210,6 +210,24 @@ class ConfigTest extends TestCase {
 		$this->assertFalse(Config::resolve($this->options(['normalize-empty-blocks' => false]))->toArray()['normalizeEmptyBlocks']);
 	}
 
+	public function testEveryCkeditorOptionSurvivesTheMapping() {
+		$options = [
+			'removeButtons'          => 'Source,-,Bold',
+			'extraAllowedContent'    => 'div[data-x]',
+			'format_tags'            => 'p;h2;h3',
+			'justifyClasses'         => ['text-left', 'text-right'],
+			'disallowedContent'      => 'script; *[on*]',
+			'title'                  => false,
+			'entities'               => false,
+			'startupFocus'           => true,
+			'clipboard_handleImages' => false,
+		];
+
+		$config = Config::resolve($this->options(['config' => $options]))->toArray();
+
+		$this->assertSame($options, $config['config']);
+	}
+
 	public function testComponentsMapping() {
 		$config = Config::resolve($this->options([
 			'assets'     => [
