@@ -4,9 +4,10 @@
  * argument, which is exactly what the "net est injectable" contract means).
  */
 
-// `?raw` keeps the engine out of the module graph: it is a browser script, not
-// an ES module, and the tests must execute it exactly like a `<script>` tag.
-import engineSource from '../../assets/js/wysiwyg.js?raw';
+// The engine is a classic IIFE, but importing it as a module gives the same
+// semantics under jsdom (it assigns `window.SyWysiwyg` on load) *and* lets
+// Vitest instrument it: `?raw` + `window.eval` was invisible to coverage.
+import '../../assets/js/wysiwyg.js';
 
 /** Base options matching what `Sy\Bootstrap\Wysiwyg\Lib\Config` serializes. */
 export const BASE_OPTIONS = {
@@ -52,8 +53,6 @@ export const BASE_OPTIONS = {
 	},
 };
 
-let loaded = false;
-
 /**
  * Execute the engine in the jsdom window, once per test file.
  *
@@ -61,10 +60,6 @@ let loaded = false;
  * `window.SyWysiwyg`, not an ES module.
  */
 export function loadEngine() {
-	if (!loaded) {
-		window.eval(engineSource);
-		loaded = true;
-	}
 	return window.SyWysiwyg;
 }
 
