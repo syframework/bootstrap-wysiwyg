@@ -119,6 +119,13 @@
 			: {};
 	}
 
+	/** Whether the page already carries the map (`components.metadata`). */
+	function embeddedMetadata(editor) {
+		var metadata = configuredComponents(editor).metadata;
+		return !!metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+			&& Object.keys(metadata).length > 0;
+	}
+
 	function metadataEndpoint(editor) {
 		var url = configuredComponents(editor).metadataUrl;
 		return typeof url === 'string' && url !== '' ? url : null;
@@ -148,9 +155,9 @@
 		var state = metadataState(editor);
 		var url = metadataEndpoint(editor);
 
-		// No endpoint: the embedded `components.metadata` map (or nothing) is
-		// the whole catalogue, and nothing is requested.
-		if (!url || state.status === 'ready') {
+		// No endpoint, or a map embedded by `components.metadata`: the payload
+		// already holds the catalogue, and nothing is requested.
+		if (!url || state.status === 'ready' || embeddedMetadata(editor)) {
 			done();
 			return;
 		}

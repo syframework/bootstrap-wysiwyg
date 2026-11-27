@@ -226,6 +226,20 @@ describe('sycomponent — lazy metadata', () => {
 		expect(editor.opened).toBe('sycomponent');
 	});
 
+	it('never asks for a map the page already embeds', async () => {
+		const {plugins} = boot([sycomponentSource]);
+		const fetchMock = stubMetadata();
+		const editor = metadataEditor({
+			metadata: {'A\\B': {label: 'Embedded', slot: '{B}', parameters: []}},
+		});
+
+		plugins.sycomponent.init(editor);
+		editor.commands.sycomponentInsert.exec();
+
+		expect(editor.opened).toBe('sycomponent');
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
 	it('keeps the catalogue for the whole editor lifetime', async () => {
 		const {plugins} = boot([sycomponentSource]);
 		const fetchMock = stubMetadata();
