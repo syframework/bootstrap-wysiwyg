@@ -111,7 +111,7 @@ start/stop buttons without creating a second editor.
 | `normalize-empty-blocks` | bool | `true` | drop empty `<p>` from the payload |
 | `templates` / `templates-files` | string / string[] | `null` / `[]` | `{LANG}` and `{CKEDITOR_ROOT}` are substituted by PHP |
 | `extra-plugins` / `remove-plugins` | string[] | `[]` | union with `config` |
-| `components.*` | — | disabled | component filtering, insertion-dialog metadata and optional `render-url` preview (Place, CMS); `assets.plugins` required when enabled |
+| `components.*` | — | disabled | component filtering, insertion-dialog metadata and optional `render-url` preview / `metadata-url` catalogue (Place, CMS); `assets.plugins` required when enabled |
 | `translations` / `translate-url` / `translate-lang` / `translate-labels` | — | `{}` / null / null / `{}` | `sytranslate` widget: current values, POST endpoint, content language, dialog labels |
 | `guard-unload` | bool | `true` | single global `beforeunload` listener |
 | `autosave.{interval,on-blur,on-dialog-close}` | — | `0`, false, false | autosave |
@@ -226,17 +226,39 @@ share the same implementation. Without a render URL, the
 widget keeps the `(save to render)` mask until the next page load.
 
 `Sy\Bootstrap\Wysiwyg\Lib\ComponentRegistry::describe($editor, $allowlist)`
-returns the same map as a payload — `{editor, ts, components}` — for a future
-on-demand transfer: `ts` is the last modification time of the described classes
-plus the metadata algorithm itself, so it only moves when the description
-really changes. The engine ships the endpoint as the
+returns the same map as a payload — `{editor, ts, components}` — so the
+catalogue can travel on demand: `ts` is the last modification time of the
+described classes plus the metadata algorithm itself, so it only moves when the
+description really changes. The engine ships the endpoint as the
 `Sy\Bootstrap\Application\Editor\Metadata` trait; it reuses the same
-`EditorAllowlist` hooks as `Render` (`renderAllowlist()`,
-`renderEditorKey()`, `renderDefaultAllowlist()`), so the render and metadata
-endpoints of a consumer can never diverge, and it answers `304` to a
-revalidating `If-None-Match` instead of resending the catalogue. A project can
-still read `components.metadata` (the embedded map) until the browser side
-consumes the URL.
+`EditorAllowlist` hooks as `Render` (`renderAllowlist()`, `renderEditorKey()`,
+`renderDefaultAllowlist()`), so the render and metadata endpoints of a consumer
+can never diverge, and it answers `304` to a revalidating `If-None-Match`
+instead of resending the catalogue.
+
+A consumer that serves that route declares it as `components.metadata-url`
+(e.g. `/editor/article/metadata`) on the editor instance. The embedded
+`components.metadata` map is then left out of the payload — the catalogue is no
+longer serialized into every page — and `sycomponent` fetches it the first time
+the insertion dialog is opened, not when the editor starts, so a page that is
+merely read never pays for it. The result is kept for the lifetime of the editor
+instance, and the `Cache-Control: private, max-age=0, must-revalidate` header of
+the endpoint makes the browser revalidate instead of refetching: a `304` costs
+one round-trip and no body. When the request fails, the dialog still opens with
+the documented fallbacks (humanized class name, generated source slot) and the
+next opening retries. Options that omit `metadata-url` keep the embedded map.
+
+```php
+new \Sy\Bootstrap\Wysiwyg\Component('article-content', [
+	// …
+	'components' => [
+		'enabled'      => true,
+		'allowlist'    => WYSIWYG_COMPONENT_ALLOWLIST['article'],
+		'render-url'   => Url::build('editor', 'article', ['action' => 'render']),
+		'metadata-url' => Url::build('editor', 'article', ['action' => 'metadata']),
+	],
+]);
+```
 
 An existing component is edited with a double-click or the **Edit component**
 context-menu entry. The dialog is prefilled from the current

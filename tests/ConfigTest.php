@@ -275,6 +275,43 @@ class ConfigTest extends TestCase {
 		$this->assertSame('/editor/render', $config['components']['renderUrl']);
 	}
 
+	public function testComponentsMetadataUrlDisablesTheEmbeddedPayload() {
+		$config = Config::resolve($this->options([
+			'assets'     => [
+				'engine'      => '/assets/js/wysiwyg.js',
+				'ckeditor-js' => '/ckeditor.js',
+				'plugins'     => '/assets/js/plugins',
+			],
+			'components' => [
+				'enabled'      => true,
+				'allowlist'    => ['Sy\\Test\\Fixtures\\Form\\Contact'],
+				'metadata-url' => '/editor/article/metadata',
+			],
+		]))->toArray();
+
+		$this->assertSame('/editor/article/metadata', $config['components']['metadataUrl']);
+		// The endpoint is the transport: the catalogue is not serialized into
+		// every page once the consumer serves it.
+		$this->assertArrayNotHasKey('metadata', $config['components']);
+	}
+
+	public function testComponentsMetadataUrlDefaultsToNull() {
+		$config = Config::resolve($this->options([
+			'assets'     => [
+				'engine'      => '/assets/js/wysiwyg.js',
+				'ckeditor-js' => '/ckeditor.js',
+				'plugins'     => '/assets/js/plugins',
+			],
+			'components' => [
+				'enabled'   => true,
+				'allowlist' => ['Sy\\Test\\Fixtures\\Form\\Contact'],
+			],
+		]))->toArray();
+
+		$this->assertNull($config['components']['metadataUrl']);
+		$this->assertArrayHasKey('metadata', $config['components']);
+	}
+
 	public function testTranslationOptions() {
 		$config = Config::resolve($this->options([
 			'assets'          => [

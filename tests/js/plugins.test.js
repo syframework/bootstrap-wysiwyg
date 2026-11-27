@@ -161,6 +161,120 @@ describe('sycomponent — widget masking', () => {
 	});
 });
 
+describe('sycomponent — lazy metadata', () => {
+	const METADATA = {
+		status: 'ok',
+		editor: 'article',
+		ts: 1700000000,
+		components: {'A\\B': {label: 'Contact form', slot: '{B}', parameters: []}},
+	};
+
+	/** Editor with an allowlist and, unless told otherwise, an endpoint. */
+	function metadataEditor(components = {}) {
+		return fakeEditor({
+			config: {
+				components: Object.assign({
+					enabled: true,
+					allowlist: ['A\\B'],
+					metadataUrl: '/editor/article/metadata',
+				}, components),
+			},
+		});
+	}
+
+	/** Answer the metadata GET with `payload`, or fail when `ok` is false. */
+	function stubMetadata(payload = METADATA, ok = true) {
+		const fetchMock = vi.fn(() => Promise.resolve({
+			ok,
+			status: ok ? 200 : 500,
+			json: () => Promise.resolve(payload),
+		}));
+		vi.stubGlobal('fetch', fetchMock);
+		return fetchMock;
+	}
+
+	it('opens the dialog without any request when no endpoint is configured', () => {
+		const {plugins} = boot([sycomponentSource]);
+		const fetchMock = stubMetadata();
+		const editor = metadataEditor({metadataUrl: null});
+
+		plugins.sycomponent.init(editor);
+		editor.commands.sycomponentInsert.exec();
+
+		expect(editor.opened).toBe('sycomponent');
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('asks the endpoint on the first opening, not when the editor starts', async () => {
+		const {plugins} = boot([sycomponentSource]);
+		const fetchMock = stubMetadata();
+		const editor = metadataEditor();
+
+		plugins.sycomponent.init(editor);
+		// Nothing is fetched while the user only reads the page.
+		expect(fetchMock).not.toHaveBeenCalled();
+		expect(editor.opened).toBeUndefined();
+
+		editor.commands.sycomponentInsert.exec();
+		// The dialog waits for the catalogue: its select shows labels.
+		expect(editor.opened).toBeUndefined();
+		await microtasks();
+
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(fetchMock.mock.calls[0][0]).toBe('/editor/article/metadata');
+		expect(fetchMock.mock.calls[0][1]).toMatchObject({credentials: 'same-origin'});
+		expect(editor.opened).toBe('sycomponent');
+	});
+
+	it('keeps the catalogue for the whole editor lifetime', async () => {
+		const {plugins} = boot([sycomponentSource]);
+		const fetchMock = stubMetadata();
+		const editor = metadataEditor();
+
+		plugins.sycomponent.init(editor);
+		editor.commands.sycomponentInsert.exec();
+		await microtasks();
+		editor.commands.sycomponentEdit.exec();
+		await microtasks();
+
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(editor.opened).toBe('sycomponent');
+	});
+
+	it('renders human labels from the fetched catalogue', async () => {
+		const {plugins, dialogs} = boot([sycomponentSource]);
+		stubMetadata();
+		const editor = metadataEditor();
+
+		plugins.sycomponent.init(editor);
+		editor.commands.sycomponentInsert.exec();
+		await microtasks();
+
+		const definition = dialogs.sycomponent(editor);
+		// The class name alone would give "A B": the label proves the payload
+		// reached the dialog.
+		expect(definition.contents[0].elements[0].items).toEqual([['Contact form', 'A\\B']]);
+	});
+
+	it('still opens the dialog when the request fails, and retries on the next opening', async () => {
+		const {plugins} = boot([sycomponentSource]);
+		const fetchMock = stubMetadata({}, false);
+		const editor = metadataEditor();
+
+		plugins.sycomponent.init(editor);
+		editor.commands.sycomponentInsert.exec();
+		await microtasks();
+
+		// A broken endpoint degrades to the generated labels, never blocks.
+		expect(editor.opened).toBe('sycomponent');
+
+		editor.commands.sycomponentInsert.exec();
+		await microtasks();
+
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
+});
+
 describe('sytranslate — labels', () => {
 	it('declares its language pack', () => {
 		const {plugins} = boot([sytranslateSource]);

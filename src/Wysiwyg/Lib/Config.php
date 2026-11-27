@@ -391,12 +391,15 @@ class Config {
 		$allowlist = array_values(array_unique($allowlist));
 
 		$components = [
-			'enabled'    => self::bool($raw, 'components.enabled', false),
-			'allowlist'  => $allowlist,
-			'renderUrl'  => self::nullableString($raw, 'components.render-url'),
+			'enabled'     => self::bool($raw, 'components.enabled', false),
+			'allowlist'   => $allowlist,
+			'renderUrl'   => self::nullableString($raw, 'components.render-url'),
+			'metadataUrl' => self::nullableString($raw, 'components.metadata-url'),
 		];
 
-		if ($components['enabled']) {
+		// A consumer serving `editor/<item>/metadata` gets the catalogue from the
+		// endpoint, on demand: the payload is not embedded in every page.
+		if ($components['enabled'] and $components['metadataUrl'] === null) {
 			$metadata = ComponentMeta::describe($allowlist);
 			if ($metadata !== []) $components['metadata'] = $metadata;
 		}

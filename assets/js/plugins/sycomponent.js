@@ -10,6 +10,12 @@
  * carries the human label, the generated slot and the constructor parameters,
  * so the dialog can render typed fields instead of a raw JSON textarea.
  *
+ * `config.components.metadataUrl` is the same catalogue served by
+ * `editor/<item>/metadata`: when the consumer provides it, the plugin fetches
+ * it the first time the dialog is opened instead of receiving it with every
+ * page, keeps it per editor and falls back to the generated labels if the
+ * request fails.
+ *
  * `config.components.renderUrl` is optional: when the consumer provides it,
  * the plugin asks the server for the component HTML after an insertion or an
  * edit, so the editor shows the final rendering immediately.
@@ -105,10 +111,94 @@
 	}
 
 	function metadataMap(editor) {
+		var state = metadataState(editor);
+		if (state.map) return state.map;
 		var metadata = configuredComponents(editor).metadata;
 		return metadata && typeof metadata === 'object' && !Array.isArray(metadata)
 			? metadata
 			: {};
+	}
+
+	function metadataEndpoint(editor) {
+		var url = configuredComponents(editor).metadataUrl;
+		return typeof url === 'string' && url !== '' ? url : null;
+	}
+
+	/**
+	 * Per-editor catalogue state: `idle`, `loading`, `ready` or `error`.
+	 *
+	 * The map stays empty until the request resolves, so every lookup keeps its
+	 * documented fallback (humanized class name, generated source slot) and a
+	 * failed fetch never blocks the editor.
+	 */
+	function metadataState(editor) {
+		if (!editor._sycomponentMetadata) {
+			editor._sycomponentMetadata = {status: 'idle', map: null, pending: []};
+		}
+		return editor._sycomponentMetadata;
+	}
+
+	/**
+	 * Fetch the catalogue the first time the dialog is needed, not when the
+	 * editor starts: a page that is only read never pays for it. The endpoint
+	 * answers `Cache-Control: private, max-age=0, must-revalidate`, so the
+	 * browser revalidates and a `304` costs no payload on the second opening.
+	 */
+	function ensureMetadata(editor, done) {
+		var state = metadataState(editor);
+		var url = metadataEndpoint(editor);
+
+		// No endpoint: the embedded `components.metadata` map (or nothing) is
+		// the whole catalogue, and nothing is requested.
+		if (!url || state.status === 'ready') {
+			done();
+			return;
+		}
+		if (state.status === 'loading') {
+			state.pending.push(done);
+			return;
+		}
+
+		state.status = 'loading';
+		state.pending.push(done);
+
+		function flush() {
+			var pending = state.pending;
+			state.pending = [];
+			pending.forEach(function (callback) {
+				callback();
+			});
+		}
+
+		fetch(url, {
+			method: 'GET',
+			credentials: 'same-origin',
+			headers: {'Accept': 'application/json'}
+		}).then(function (response) {
+			if (!response.ok) throw new Error('Component metadata request failed');
+			return response.json();
+		}).then(function (data) {
+			state.map = data && data.components && typeof data.components === 'object'
+				&& !Array.isArray(data.components)
+				? data.components
+				: {};
+			state.status = 'ready';
+			flush();
+		}).catch(function () {
+			// `error` is a retryable state: the next opening asks again.
+			state.status = 'error';
+			flush();
+		});
+	}
+
+	/**
+	 * Metadata describes the allowlist, so the dialog is opened once the
+	 * catalogue is known: its select shows human labels instead of class names.
+	 */
+	function openComponentDialog(editor) {
+		ensureMetadata(editor, function () {
+			editor.openDialog('sycomponent');
+		});
 	}
 
 	function componentMeta(editor, component) {
@@ -575,7 +665,7 @@
 					}
 					editor._sycomponentEditWidget = widget;
 					editable.focus();
-					editor.openDialog('sycomponent');
+					openComponentDialog(editor);
 					event.data.preventDefault();
 				});
 			}
@@ -585,12 +675,12 @@
 			editor.addCommand('sycomponentInsert', {
 				exec: function () {
 					editor._sycomponentEditWidget = null;
-					editor.openDialog('sycomponent');
+					openComponentDialog(editor);
 				}
 			});
 			editor.addCommand('sycomponentEdit', {
 				exec: function () {
-					editor.openDialog('sycomponent');
+					openComponentDialog(editor);
 				}
 			});
 

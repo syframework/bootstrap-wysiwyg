@@ -97,6 +97,21 @@ describe('buildConfig — consumer config', () => {
 		expect(config.components.renderUrl).toBe('/editor/render');
 	});
 
+	it('keeps the component metadata URL', async () => {
+		const config = await resolvedConfig({
+			components: {enabled: true, allowlist: ['A\\B'], metadataUrl: '/editor/article/metadata'},
+			extraPlugins: ['sycomponent'],
+			assets: {
+				engine: '/assets/js/wysiwyg.js',
+				ckeditorJs: '/assets/ckeditor/ckeditor.js',
+				ckeditorRoot: '/assets/ckeditor',
+				plugins: '/assets/js/plugins',
+			},
+		});
+
+		expect(config.components.metadataUrl).toBe('/editor/article/metadata');
+	});
+
 	it('keeps the component metadata map as-is', async () => {
 		const metadata = {'A\\B': {label: 'A B', slot: '{B}', parameters: []}};
 		const config = await resolvedConfig({

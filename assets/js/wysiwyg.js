@@ -171,6 +171,9 @@
 				if (isPlainObject(value) && has(value, 'renderUrl')) {
 					result.components.renderUrl = value.renderUrl;
 				}
+				if (isPlainObject(value) && has(value, 'metadataUrl')) {
+					result.components.metadataUrl = value.metadataUrl;
+				}
 				return;
 			}
 			result[key] = isPlainObject(base[key]) && isPlainObject(value)
