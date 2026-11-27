@@ -1,6 +1,8 @@
 <?php
 namespace Sy\Bootstrap\Application\Editor;
 
+use Sy\Bootstrap\Wysiwyg\Lib\ComponentArgs;
+
 /**
  * Shared `editor/<item>/render` endpoint.
  *
@@ -51,6 +53,11 @@ trait Render {
 			if (!is_array($decoded)) {
 				return $this->requestError(['message' => 'Invalid component arguments']);
 			}
+		}
+
+		$reason = ComponentArgs::validate($class, $decoded);
+		if ($reason !== null) {
+			return $this->requestError(['message' => 'Invalid component arguments: ' . $reason]);
 		}
 
 		$lang = $this->renderLanguage();

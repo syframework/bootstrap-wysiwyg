@@ -393,6 +393,114 @@ describe('sycomponent — mode strict', () => {
 	});
 });
 
+describe('sycomponent — arguments nommés', () => {
+	const COMPONENT = 'A\\B';
+	const STRING_PARAM = {
+		name: 'value',
+		type: 'string',
+		required: false,
+		nullable: true,
+		hasDefault: true,
+		default: null,
+		variadic: false,
+	};
+	const METADATA = {[COMPONENT]: {label: 'Contact form', slot: '{B}', parameters: [STRING_PARAM]}};
+
+	function argumentEditor(components = {}) {
+		return fakeEditor({
+			config: {
+				components: Object.assign({enabled: true, allowlist: [COMPONENT]}, components),
+			},
+		});
+	}
+
+	function dialogLike(container, component = COMPONENT) {
+		const select = {options: [{value: component}], value: ''};
+		return {
+			getValueOf: () => component,
+			getContentElement: () => ({getInputElement: () => ({$: select})}),
+			getElement: () => ({
+				$: {
+					querySelector: (selector) => (selector === '.sycomponent-fields' ? container : null),
+				},
+			}),
+			hide() {},
+		};
+	}
+
+	it('omits an optional string the user never filled', () => {
+		const {plugins, dialogs} = boot([sycomponentSource]);
+		const editor = argumentEditor({metadata: METADATA});
+		plugins.sycomponent.init(editor);
+
+		const container = document.createElement('div');
+		const definition = dialogs.sycomponent(editor);
+		const dialog = dialogLike(container);
+		definition.onShow.call(dialog);
+		definition.onOk.call(dialog);
+
+		// Absent: the constructor default applies.
+		expect(editor.inserted[0]).not.toContain('data-sycomponent-args');
+	});
+
+	it('keeps an explicit empty string when the field was touched', () => {
+		const {plugins, dialogs} = boot([sycomponentSource]);
+		const editor = argumentEditor({metadata: METADATA});
+		plugins.sycomponent.init(editor);
+
+		const container = document.createElement('div');
+		const definition = dialogs.sycomponent(editor);
+		const dialog = dialogLike(container);
+		definition.onShow.call(dialog);
+
+		const field = container.querySelector('[data-sycomponent-param="value"]');
+		field.value = 'x';
+		field.dispatchEvent(new window.Event('input'));
+		field.value = '';
+		definition.onOk.call(dialog);
+
+		// Present: `""` is a value, not a missing argument.
+		expect(editor.inserted[0]).toContain('data-sycomponent-args');
+		expect(editor.inserted[0]).toContain('&quot;value&quot;:&quot;&quot;');
+	});
+
+	it('refuses a positional payload typed in the JSON textarea', () => {
+		const {plugins, dialogs} = boot([sycomponentSource]);
+		const editor = argumentEditor();
+		plugins.sycomponent.init(editor);
+
+		const container = document.createElement('div');
+		const definition = dialogs.sycomponent(editor);
+		const dialog = dialogLike(container);
+		definition.onShow.call(dialog);
+
+		container.querySelector('[data-sycomponent-json]').value = '["x"]';
+		const accepted = definition.onOk.call(dialog);
+
+		expect(accepted).toBe(false);
+		expect(alertSpy).toHaveBeenCalled();
+		expect(editor.inserted).toHaveLength(0);
+	});
+
+	it('refuses a key that is not a parameter name', () => {
+		const {plugins, dialogs} = boot([sycomponentSource]);
+		const editor = argumentEditor();
+		plugins.sycomponent.init(editor);
+
+		const container = document.createElement('div');
+		const definition = dialogs.sycomponent(editor);
+		const dialog = dialogLike(container);
+		definition.onShow.call(dialog);
+
+		container.querySelector('[data-sycomponent-json]').value = '{"foo bar":1}';
+		const accepted = definition.onOk.call(dialog);
+
+		expect(accepted).toBe(false);
+		expect(alertSpy).toHaveBeenCalled();
+		expect(editor.inserted).toHaveLength(0);
+	});
+});
+
 describe('sytranslate — labels', () => {
 	it('declares its language pack', () => {
 		const {plugins} = boot([sytranslateSource]);

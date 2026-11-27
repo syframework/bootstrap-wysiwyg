@@ -43,6 +43,12 @@ class ComponentRenderer {
 				continue;
 			}
 
+			$reason = ComponentArgs::validate($class, $args);
+			if ($reason !== null) {
+				self::log($reason);
+				continue;
+			}
+
 			try {
 				$component = new $class(...$args);
 			} catch (\Throwable $e) {

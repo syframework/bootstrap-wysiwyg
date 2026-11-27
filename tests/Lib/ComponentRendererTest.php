@@ -59,6 +59,24 @@ class ComponentRendererTest extends TestCase {
 		$this->assertStringContainsString('invalid arguments', (string) file_get_contents($this->logFile));
 	}
 
+	/**
+	 * A renamed constructor parameter used to disappear behind `Unknown named
+	 * parameter`: the log now names the argument and the wrapper stays.
+	 */
+	public function testUnknownArgumentIsLoggedAndLeavesThePlaceholderInPlace() {
+		$html = '<div data-sycomponent="Sy\\Test\\Fixtures\\RenderedComponent" data-sycomponent-args="{&quot;oldName&quot;:&quot;x&quot;}">{SLOT}</div>';
+
+		$this->assertSame($html, ComponentRenderer::render($html, [RenderedComponent::class]));
+		$this->assertStringContainsString('unknown argument', (string) file_get_contents($this->logFile));
+	}
+
+	public function testPositionalArgumentsAreRefused() {
+		$html = '<div data-sycomponent="Sy\\Test\\Fixtures\\RenderedComponent" data-sycomponent-args="[&quot;x&quot;]">{SLOT}</div>';
+
+		$this->assertSame($html, ComponentRenderer::render($html, [RenderedComponent::class]));
+		$this->assertStringContainsString('invalid argument name', (string) file_get_contents($this->logFile));
+	}
+
 	public function testContainerTranslatorsAreAvailableToComponents() {
 		$html      = '<div data-sycomponent="Sy\\Test\\Fixtures\\TranslatedComponent">{SLOT}</div>';
 		$container = new WebComponent();

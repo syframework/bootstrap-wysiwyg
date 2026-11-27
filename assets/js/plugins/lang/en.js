@@ -16,6 +16,7 @@ CKEDITOR.plugins.setLang('sycomponent', 'en', {
 	requiredField: 'The "%field%" field is required.',
 	invalidInteger: 'The "%field%" field must be an integer.',
 	invalidNumber: 'The "%field%" field must be a number.',
+	invalidKey: 'Arguments are named after constructor parameters: "%key%" is not a valid name.',
 	invalidFieldJson: 'The "%field%" field must be valid JSON.',
 	invalidArray: 'The "%field%" field must be a JSON array.',
 	rendering: '(rendering…)',

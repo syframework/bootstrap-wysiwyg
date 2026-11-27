@@ -16,6 +16,7 @@ CKEDITOR.plugins.setLang('sycomponent', 'fr', {
 	requiredField: 'Le champ « %field% » est requis.',
 	invalidInteger: 'Le champ « %field% » doit être un entier.',
 	invalidNumber: 'Le champ « %field% » doit être un nombre.',
+	invalidKey: "Les arguments portent le nom des paramètres du constructeur : « %key% » n’est pas un nom valide.",
 	invalidFieldJson: 'Le champ « %field% » doit être un JSON valide.',
 	invalidArray: 'Le champ « %field% » doit être un tableau JSON.',
 	rendering: '(rendu en cours…)',

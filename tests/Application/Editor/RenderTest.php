@@ -101,7 +101,8 @@ class RenderTest extends TestCase {
 	}
 
 	public function testRendersAnAllowedComponentWithItsArguments() {
-		$_POST = ['component' => RenderableComponent::class, 'args' => '["hello"]'];
+		// Named arguments: the payload is an object keyed by parameter name.
+		$_POST = ['component' => RenderableComponent::class, 'args' => '{"value":"hello"}'];
 		$endpoint = new RenderEndpoint();
 
 		$endpoint->renderAction();
@@ -109,7 +110,47 @@ class RenderTest extends TestCase {
 		$this->assertSame(200, $endpoint->code);
 		$this->assertSame('ok', $endpoint->data['status']);
 		$this->assertSame('<p>hello</p>', $endpoint->data['html']);
-		$this->assertSame([[RenderableComponent::class, ['hello']]], $endpoint->rendered);
+		$this->assertSame([[RenderableComponent::class, ['value' => 'hello']]], $endpoint->rendered);
+	}
+
+	/**
+	 * A positional array would bind by position instead of by name, which is
+	 * exactly what the named-argument contract forbids.
+	 */
+	public function testRefusesPositionalArguments() {
+		$_POST = ['component' => RenderableComponent::class, 'args' => '["hello"]'];
+		$endpoint = new RenderEndpoint();
+
+		$endpoint->renderAction();
+
+		$this->assertSame(400, $endpoint->code);
+		$this->assertStringContainsString('invalid argument name', $endpoint->data['message']);
+		$this->assertSame([], $endpoint->rendered);
+	}
+
+	public function testRefusesAnArgumentThatIsNotAParameterName() {
+		$_POST = ['component' => RenderableComponent::class, 'args' => '{"foo bar":"x"}'];
+		$endpoint = new RenderEndpoint();
+
+		$endpoint->renderAction();
+
+		$this->assertSame(400, $endpoint->code);
+		$this->assertStringContainsString('"foo bar"', $endpoint->data['message']);
+	}
+
+	/**
+	 * The diagnosis a renamed constructor parameter used to hide: the payload
+	 * kept the old key and PHP answered `Unknown named parameter`.
+	 */
+	public function testRefusesAnArgumentTheConstructorDoesNotDeclare() {
+		$_POST = ['component' => RenderableComponent::class, 'args' => '{"oldName":"x"}'];
+		$endpoint = new RenderEndpoint();
+
+		$endpoint->renderAction();
+
+		$this->assertSame(400, $endpoint->code);
+		$this->assertStringContainsString('unknown argument "oldName"', $endpoint->data['message']);
+		$this->assertSame([], $endpoint->rendered);
 	}
 
 	public function testRendersWithoutArguments() {

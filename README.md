@@ -269,6 +269,34 @@ new \Sy\Bootstrap\Wysiwyg\Component('article-content', [
 ]);
 ```
 
+### Component arguments
+
+`data-sycomponent-args` is a JSON **object** keyed by constructor parameter
+name, and both render paths spread it as named arguments
+(`new $class(...$args)`). That is what lets a reordered constructor keep the
+values already stored, and it is why the payload is validated before it reaches
+the class (`Wysiwyg\Lib\ComponentArgs`):
+
+| Payload | Result |
+|---|---|
+| `{"lat":"48.1","lng":"-1.6"}` | accepted |
+| `["48.1","-1.6"]` | refused — a positional array would bind by position |
+| `{"foo bar":1}` | refused — not a parameter name (`/^[A-Za-z_][A-Za-z0-9_]*$/`) |
+| `{"oldName":1}` on a renamed parameter | refused — the class no longer declares it |
+
+`editor/<item>/render` answers `400` with the reason
+(`Invalid component arguments: unknown argument "oldName" for …`), and
+`ComponentRenderer` logs it and leaves the wrapper in place: a renamed parameter
+now names itself in the log instead of disappearing behind `Unknown named
+parameter`. A class the metadata cannot describe is not refused here — PHP stays
+the judge, and the dialog already falls back to the JSON textarea.
+
+The dialog also distinguishes an **absent** argument from an **empty** one: an
+optional string field the user never filled is omitted (the constructor default
+applies), while a field the user edited keeps its `""` — so a
+`?string $value = 'x'` can genuinely be set to the empty string. Typed
+parameters keep falling back to their default, since `""` is not a valid `int`.
+
 ### Strict mode
 
 `components.strict` is off by default: the dialog keeps its documented fallbacks

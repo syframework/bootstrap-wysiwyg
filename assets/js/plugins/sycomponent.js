@@ -92,6 +92,7 @@
 		requiredField: 'The "%field%" field is required.',
 		invalidInteger: 'The "%field%" field must be an integer.',
 		invalidNumber: 'The "%field%" field must be a number.',
+		invalidKey: 'Arguments are named after constructor parameters: "%key%" is not a valid name.',
 		invalidFieldJson: 'The "%field%" field must be valid JSON.',
 		invalidArray: 'The "%field%" field must be a JSON array.',
 		rendering: '(rendering…)',
@@ -363,6 +364,13 @@
 		input.setAttribute('data-sycomponent-param', parameter.name);
 		input.setAttribute('data-sycomponent-type', parameter.type);
 		input.setAttribute('autocomplete', 'off');
+		// Touched fields are `present`: emptying one must express `""`, not
+		// "fall back to the constructor default".
+		['input', 'change', 'blur'].forEach(function (name) {
+			input.addEventListener(name, function () {
+				input.setAttribute('data-sycomponent-touched', '1');
+			});
+		});
 		input.style.width = '100%';
 		input.style.maxWidth = '100%';
 		input.style.margin = '0';
@@ -417,6 +425,16 @@
 		if (!container) return;
 
 		container.innerHTML = '';
+
+		// `present`: which parameters already carry a value. A stored `""` is a
+		// value, so re-rendering the dialog must not silently drop it.
+		dialog._sycomponentPresent = {};
+		if (values && typeof values === 'object' && !Array.isArray(values)) {
+			Object.keys(values).forEach(function (key) {
+				dialog._sycomponentPresent[key] = true;
+			});
+		}
+
 		var component = dialog.getValueOf('info', 'component');
 		var params = parameters(editor, component);
 
@@ -458,6 +476,16 @@
 		});
 	}
 
+	/**
+	 * Whether a parameter explicitly carries a value: it is in the stored
+	 * arguments, or the user edited the field during this dialog session.
+	 */
+	function isPresent(dialog, field, parameter) {
+		if (field && field.getAttribute('data-sycomponent-touched') === '1') return true;
+		var present = dialog ? dialog._sycomponentPresent : null;
+		return !!present && present[parameter.name] === true;
+	}
+
 	function readArguments(editor, dialog) {
 		var component = dialog.getValueOf('info', 'component');
 		var params = parameters(editor, component);
@@ -476,6 +504,14 @@
 			}
 			if (parsed === null || typeof parsed !== 'object') {
 				alert(message(editor, 'invalidJsonShape'));
+				return null;
+			}
+			var invalidKey = null;
+			Object.keys(parsed).forEach(function (key) {
+				if (invalidKey === null && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) invalidKey = key;
+			});
+			if (invalidKey !== null) {
+				alert(message(editor, 'invalidKey', {key: invalidKey}));
 				return null;
 			}
 			return raw;
@@ -505,6 +541,12 @@
 				if (parameter.required) {
 					alert(message(editor, 'requiredField', {field: humanize(parameter.name)}));
 					return null;
+				}
+				// Only a string can hold `""`: typed parameters keep falling back
+				// to their default instead of receiving an invalid value.
+				if ((parameter.type === 'string' || parameter.type === 'text')
+					&& isPresent(dialog, field, parameter)) {
+					values[parameter.name] = '';
 				}
 				continue;
 			}
