@@ -7,9 +7,10 @@ use Sy\Bootstrap\Wysiwyg\Lib\ComponentRegistry;
  * Shared `editor/<item>/metadata` endpoint.
  *
  * The `sycomponent` dialog needs to know which components the editor accepts
- * and how to describe them. Today that map travels embedded in every page
- * (`components.metadata`); this endpoint serves the same map on demand, so a
- * consumer can stop shipping it and the browser revalidates it instead.
+ * and how to describe them. Without this endpoint the map travels embedded in
+ * every page (`components.metadata`); a consumer that declares
+ * `components.metadata-url` stops shipping it and the plugin fetches it the
+ * first time the dialog is opened, then revalidates with `If-None-Match`.
  *
  *   class Place extends \Sy\Bootstrap\Component\Api {
  *       use CkFile;
