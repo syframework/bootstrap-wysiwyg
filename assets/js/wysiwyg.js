@@ -475,7 +475,9 @@
 		PLUGINS.forEach(function (name) {
 			if (options.extraPlugins.indexOf(name) === -1) return;
 			var path = options.assets.plugins + '/' + name + '.js';
-			if (SCRIPT_VERSION) path += '?v=' + SCRIPT_VERSION;
+			if (SCRIPT_VERSION) {
+				path += (path.indexOf('?') === -1 ? '?' : '&') + 'v=' + SCRIPT_VERSION;
+			}
 			editor.plugins.addExternal(name, path);
 		});
 	}
