@@ -10,6 +10,24 @@ class EditorAssetsTest extends TestCase {
 		$this->assertSame('/webroot/assets/js/wysiwyg.js', EditorAssets::engine());
 	}
 
+	public function testVersionIsAStamp() {
+		$version = EditorAssets::version();
+
+		// Released installs stamp the tag, dev installs the file mtime: either
+		// way it moves when the assets move, which is what busts the cache.
+		$this->assertNotSame('', $version);
+		$this->assertMatchesRegularExpression('/^[0-9A-Za-z._-]+$/', $version);
+	}
+
+	public function testVersionConstantWins() {
+		$output = $this->runIsolated(
+			'define("WYSIWYG_VERSION", "2026.11");'
+			. 'echo \\Sy\\Bootstrap\\Wysiwyg\\Lib\\EditorAssets::version();'
+		);
+
+		$this->assertSame('2026.11', $output);
+	}
+
 	public function testJsFallsBackToCdn() {
 		$this->assertStringContainsString('cdn.ckeditor.com', EditorAssets::js());
 		$this->assertStringEndsWith('/ckeditor.js', EditorAssets::js());

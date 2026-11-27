@@ -446,6 +446,24 @@
 		});
 	}
 
+	/**
+	 * Cache stamp of this script (`?v=`, added by `Wysiwyg\Editor`).
+	 *
+	 * The engine and the `sy*` plugins are copied together, so the stamp also
+	 * versions the plugin URLs: CKEditor asks for external plugins with a
+	 * fixed `?t=` that no release changes, and without it the browser keeps
+	 * whichever plugin file it fetched first — a stale `sycomponent.js` runs
+	 * against a new engine (or the other way round) after an upgrade.
+	 */
+	var SCRIPT_VERSION = (function () {
+		var src = typeof document !== 'undefined' && document.currentScript
+			? document.currentScript.src
+			: '';
+		if (!src) return '';
+		var match = /[?&]v=([^&#]+)/.exec(src);
+		return match ? match[1] : '';
+	})();
+
 	/** D8/V17: activate `sy*` plugins, from files shipped with the engine. */
 	function registerPlugins(options) {
 		// `sycomponent` only enters extraPlugins when components are enabled;
@@ -456,7 +474,9 @@
 		if (!editor.plugins || typeof editor.plugins.addExternal !== 'function') return;
 		PLUGINS.forEach(function (name) {
 			if (options.extraPlugins.indexOf(name) === -1) return;
-			editor.plugins.addExternal(name, options.assets.plugins + '/' + name + '.js');
+			var path = options.assets.plugins + '/' + name + '.js';
+			if (SCRIPT_VERSION) path += '?v=' + SCRIPT_VERSION;
+			editor.plugins.addExternal(name, path);
 		});
 	}
 

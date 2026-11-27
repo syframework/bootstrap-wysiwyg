@@ -45,6 +45,42 @@ class EditorAssets {
 	}
 
 	/**
+	 * Version stamp of the engine assets.
+	 *
+	 * `Wysiwyg\Editor` loads the engine with `?v=<stamp>` and the engine
+	 * forwards the stamp to the `sy*` plugin URLs. Without it, an upgraded
+	 * install keeps the files the browser already fetched: CKEditor requests
+	 * external plugins with a fixed `?t=`, and nothing else versioned the
+	 * engine itself, so a new plugin could run against a stale engine (or the
+	 * other way round) after a release.
+	 *
+	 * The stamp is the installed package version, then the engine file mtime;
+	 * `WYSIWYG_VERSION` overrides both when a project ships the files itself.
+	 *
+	 * @return string Empty when no stamp is available.
+	 */
+	public static function version() {
+		static $version = null;
+		if ($version !== null) return $version;
+
+		if (defined('WYSIWYG_VERSION')) return $version = (string) WYSIWYG_VERSION;
+
+		// A released tag is the stamp a CDN should cache on. A dev install
+		// (`dev-develop`) keeps the same version across commits, so the file
+		// mtime is the only value that moves there.
+		if (class_exists('\\Composer\\InstalledVersions')) {
+			$pretty = \Composer\InstalledVersions::getPrettyVersion('sy/bootstrap-wysiwyg');
+			if (is_string($pretty) and preg_match('/^v?\d+\.\d+/', $pretty) === 1) {
+				return $version = $pretty;
+			}
+		}
+
+		// src/Wysiwyg/Lib -> package root.
+		$file = dirname(__DIR__, 3) . '/assets/js/wysiwyg.js';
+		return $version = is_file($file) ? (string) filemtime($file) : '';
+	}
+
+	/**
 	 * CKEditor plugins delivered by the framework.
 	 *
 	 * @return string

@@ -82,10 +82,30 @@ class EditorTest extends TestCase {
 		$links = $this->editor()->getJsLinks();
 
 		$this->assertSame([], $links[Editor::JS_TOP]);
-		$this->assertSame(
-			['/assets/ckeditor/ckeditor.js', '/assets/js/wysiwyg.js'],
-			array_map(function ($link) { return $link['url']; }, array_values($links[Editor::JS_BOTTOM]))
-		);
+		$urls = array_map(function ($link) { return $link['url']; }, array_values($links[Editor::JS_BOTTOM]));
+		$this->assertSame('/assets/ckeditor/ckeditor.js', $urls[0]);
+		$this->assertStringStartsWith('/assets/js/wysiwyg.js?v=', $urls[1]);
+	}
+
+	/**
+	 * CKEditor requests external plugins with a fixed `?t=`: without a stamp on
+	 * the engine URL, an upgrade keeps running the previous engine or plugin.
+	 */
+	public function testEngineUrlCarriesTheAssetVersion() {
+		$version = \Sy\Bootstrap\Wysiwyg\Lib\EditorAssets::version();
+		$this->assertNotSame('', $version);
+
+		$urls = array_values($this->editor()->getJsLinks()[Editor::JS_BOTTOM]);
+		$this->assertSame('/assets/js/wysiwyg.js?v=' . rawurlencode($version), $urls[1]['url']);
+	}
+
+	public function testEngineUrlKeepsAnExistingQueryString() {
+		$urls = array_values($this->editor(['assets' => [
+			'engine'      => '/assets/js/wysiwyg.js?theme=dark',
+			'ckeditor-js' => '/assets/ckeditor/ckeditor.js',
+		]])->getJsLinks()[Editor::JS_BOTTOM]);
+
+		$this->assertStringStartsWith('/assets/js/wysiwyg.js?theme=dark&v=', $urls[1]['url']);
 	}
 
 	public function testCreateWaitsForTheDeferredEngine() {

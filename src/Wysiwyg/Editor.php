@@ -2,6 +2,7 @@
 namespace Sy\Bootstrap\Wysiwyg;
 
 use Sy\Bootstrap\Wysiwyg\Lib\Config;
+use Sy\Bootstrap\Wysiwyg\Lib\EditorAssets;
 use Sy\Component\WebComponent;
 
 /**
@@ -36,7 +37,7 @@ class Editor extends WebComponent {
 		// D19 bis: CKEditor first, the engine second. Both at the bottom, so the
 		// inline call below runs after the two files are parsed and executed.
 		$this->addJsLink($this->config->asset('ckeditorJs'), ['position' => self::JS_BOTTOM]);
-		$this->addJsLink($this->config->asset('engine'), ['position' => self::JS_BOTTOM]);
+		$this->addJsLink($this->engineUrl(), ['position' => self::JS_BOTTOM]);
 
 		// addJsLink() emits `defer` scripts: the inline call must wait for
 		// DOMContentLoaded, otherwise it runs before the engine defines the
@@ -61,6 +62,22 @@ class Editor extends WebComponent {
 			. '})();',
 			['position' => self::JS_BOTTOM, 'type' => '']
 		);
+	}
+
+	/**
+	 * Engine URL, stamped with the asset version.
+	 *
+	 * The engine forwards the stamp to the `sy*` plugin URLs it registers, so
+	 * engine and plugins are always refreshed together: CKEditor asks for
+	 * external plugins with a fixed `?t=`, which no release ever changes.
+	 *
+	 * @return string
+	 */
+	private function engineUrl() {
+		$url     = $this->config->asset('engine');
+		$version = EditorAssets::version();
+		if ($version === '') return $url;
+		return $url . (strpos($url, '?') === false ? '?' : '&') . 'v=' . rawurlencode($version);
 	}
 
 	/**

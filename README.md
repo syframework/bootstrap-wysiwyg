@@ -86,6 +86,15 @@ SyWysiwyg.create(document.getElementById("article-content"), { … });
 `WEB_ROOT`. The component still requires explicit `assets.*` options, so a
 project can use a CDN or rename its build.
 
+The component loads the engine as `…/wysiwyg.js?v=<stamp>`
+(`EditorAssets::version()` — the installed tag, the engine file mtime for a
+`dev-*` install, or the `WYSIWYG_VERSION` constant), and the engine forwards
+that stamp to the `sy*` plugin URLs it registers. This matters because CKEditor
+requests external plugins with a fixed `?t=` that no release ever changes:
+without the stamp, an upgraded install keeps running the engine or the plugin
+the browser cached first, and a new feature can silently look absent (for
+example `components.metadata-url` never being fetched).
+
 ### Instance registry
 
 `SyWysiwyg.get(elementId)` returns the instance created for that container, or
