@@ -295,6 +295,32 @@ class ConfigTest extends TestCase {
 		$this->assertArrayNotHasKey('metadata', $config['components']);
 	}
 
+	public function testComponentsStrictDefaultsToFalse() {
+		$config = Config::resolve($this->options([
+			'assets'     => [
+				'engine'      => '/assets/js/wysiwyg.js',
+				'ckeditor-js' => '/ckeditor.js',
+				'plugins'     => '/assets/js/plugins',
+			],
+			'components' => ['enabled' => true, 'allowlist' => ['A\\B']],
+		]))->toArray();
+
+		$this->assertFalse($config['components']['strict']);
+	}
+
+	public function testComponentsStrictIsOptIn() {
+		$config = Config::resolve($this->options([
+			'assets'     => [
+				'engine'      => '/assets/js/wysiwyg.js',
+				'ckeditor-js' => '/ckeditor.js',
+				'plugins'     => '/assets/js/plugins',
+			],
+			'components' => ['enabled' => true, 'allowlist' => ['A\\B'], 'strict' => true],
+		]))->toArray();
+
+		$this->assertTrue($config['components']['strict']);
+	}
+
 	public function testComponentsMetadataUrlDefaultsToNull() {
 		$config = Config::resolve($this->options([
 			'assets'     => [

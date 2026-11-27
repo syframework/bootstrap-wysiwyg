@@ -112,6 +112,21 @@ describe('buildConfig — consumer config', () => {
 		expect(config.components.metadataUrl).toBe('/editor/article/metadata');
 	});
 
+	it('keeps the opt-in strict mode', async () => {
+		const config = await resolvedConfig({
+			components: {enabled: true, allowlist: ['A\\B'], strict: true},
+			extraPlugins: ['sycomponent'],
+			assets: {
+				engine: '/assets/js/wysiwyg.js',
+				ckeditorJs: '/assets/ckeditor/ckeditor.js',
+				ckeditorRoot: '/assets/ckeditor',
+				plugins: '/assets/js/plugins',
+			},
+		});
+
+		expect(config.components.strict).toBe(true);
+	});
+
 	it('keeps the component metadata map as-is', async () => {
 		const metadata = {'A\\B': {label: 'A B', slot: '{B}', parameters: []}};
 		const config = await resolvedConfig({

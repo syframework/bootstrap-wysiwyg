@@ -120,7 +120,7 @@ start/stop buttons without creating a second editor.
 | `normalize-empty-blocks` | bool | `true` | drop empty `<p>` from the payload |
 | `templates` / `templates-files` | string / string[] | `null` / `[]` | `{LANG}` and `{CKEDITOR_ROOT}` are substituted by PHP |
 | `extra-plugins` / `remove-plugins` | string[] | `[]` | union with `config` |
-| `components.*` | — | disabled | component filtering, insertion-dialog metadata and optional `render-url` preview / `metadata-url` catalogue (Place, CMS); `assets.plugins` required when enabled |
+| `components.*` | — | disabled | component filtering, insertion-dialog metadata and optional `render-url` preview / `metadata-url` catalogue / `strict` mode (Place, CMS, Article); `assets.plugins` required when enabled |
 | `translations` / `translate-url` / `translate-lang` / `translate-labels` | — | `{}` / null / null / `{}` | `sytranslate` widget: current values, POST endpoint, content language, dialog labels |
 | `guard-unload` | bool | `true` | single global `beforeunload` listener |
 | `autosave.{interval,on-blur,on-dialog-close}` | — | `0`, false, false | autosave |
@@ -268,6 +268,25 @@ new \Sy\Bootstrap\Wysiwyg\Component('article-content', [
 	],
 ]);
 ```
+
+### Strict mode
+
+`components.strict` is off by default: the dialog keeps its documented fallbacks
+(a JSON textarea for a class it cannot describe, the `(save to render)` mask when
+no preview URL is configured). A project can opt in with the
+`WYSIWYG_COMPONENT_STRICT` constant, which the Article, CMS and Place
+`EditorConfig` forward to the editor:
+
+```php
+define('WYSIWYG_COMPONENT_STRICT', true);
+```
+
+In strict mode a fallback that would hide a failure is replaced by a visible
+error: an undescribed component shows a red notice in the dialog instead of the
+JSON textarea and cannot be inserted, a catalogue that never loaded says so
+explicitly, and a failed preview displays `(preview unavailable)` instead of
+`(save to render)`. Strings are provided by `lang/en.js` and `lang/fr.js`
+(`strictUnknown`, `strictCatalogue`, `renderUnavailable`).
 
 An existing component is edited with a double-click or the **Edit component**
 context-menu entry. The dialog is prefilled from the current

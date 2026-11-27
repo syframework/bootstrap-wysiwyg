@@ -17,6 +17,7 @@ function boot(sources) {
 	const plugins = {};
 	const dialogs = {};
 	const langs = {};
+	let uniqueId = 0;
 
 	window.CKEDITOR = {
 		plugins: {
@@ -34,6 +35,11 @@ function boot(sources) {
 		dialog: {
 			add(name, factory) {
 				dialogs[name] = factory;
+			},
+		},
+		tools: {
+			getUniqueId() {
+				return 'unique-' + (++uniqueId);
 			},
 		},
 		addCss() {},
@@ -78,6 +84,13 @@ function fakeEditor(overrides = {}) {
 		},
 		insertHtml(html) {
 			editor.inserted.push(html);
+		},
+		// `onOk` fires `change` and gives the focus back after an edit.
+		fire(name) {
+			(editor.fired = editor.fired || []).push(name);
+		},
+		focus() {
+			editor.focused = (editor.focused || 0) + 1;
 		},
 		openDialog(name) {
 			editor.opened = name;
@@ -286,6 +299,97 @@ describe('sycomponent — lazy metadata', () => {
 		await microtasks();
 
 		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe('sycomponent — mode strict', () => {
+	const COMPONENT = 'A\\B';
+	const METADATA = {[COMPONENT]: {label: 'Contact form', slot: '{B}', parameters: []}};
+
+	/** Editor whose catalogue is either embedded or absent. */
+	function strictEditor(components = {}) {
+		return fakeEditor({
+			config: {
+				components: Object.assign({enabled: true, allowlist: [COMPONENT], strict: true}, components),
+			},
+		});
+	}
+
+	/**
+	 * The dialog callbacks only need three things: the selected class, the
+	 * fields container, and the select CKEditor would have rendered.
+	 */
+	function dialogLike(container, component = COMPONENT) {
+		const select = {options: [{value: component}], value: ''};
+		return {
+			hidden: false,
+			getValueOf: () => component,
+			getContentElement: () => ({getInputElement: () => ({$: select})}),
+			getElement: () => ({
+				$: {
+					querySelector: (selector) => (selector === '.sycomponent-fields' ? container : null),
+				},
+			}),
+			hide() {
+				this.hidden = true;
+			},
+		};
+	}
+
+	it('refuses to insert a component the catalogue does not describe', () => {
+		const {plugins, dialogs} = boot([sycomponentSource]);
+		const editor = strictEditor();
+		plugins.sycomponent.init(editor);
+
+		const dialog = dialogLike(document.createElement('div'));
+		const accepted = dialogs.sycomponent(editor).onOk.call(dialog);
+
+		expect(accepted).toBe(false);
+		expect(alertSpy).toHaveBeenCalled();
+		expect(editor.inserted).toHaveLength(0);
+	});
+
+	it('shows an error instead of the JSON textarea', () => {
+		const {plugins, dialogs} = boot([sycomponentSource]);
+		const editor = strictEditor();
+		plugins.sycomponent.init(editor);
+
+		const container = document.createElement('div');
+		const dialog = dialogLike(container);
+		dialogs.sycomponent(editor).onShow.call(dialog);
+
+		expect(container.querySelector('[data-sycomponent-json]')).toBeNull();
+		const panel = container.querySelector('[data-sycomponent-error]');
+		expect(panel).not.toBeNull();
+		expect(panel.textContent).toContain('could not be loaded');
+	});
+
+	it('still offers the JSON textarea without strict mode', () => {
+		const {plugins, dialogs} = boot([sycomponentSource]);
+		const editor = strictEditor({strict: false});
+		plugins.sycomponent.init(editor);
+
+		const container = document.createElement('div');
+		dialogs.sycomponent(editor).onShow.call(dialogLike(container));
+
+		expect(container.querySelector('[data-sycomponent-json]')).not.toBeNull();
+		expect(container.querySelector('[data-sycomponent-error]')).toBeNull();
+	});
+
+	it('inserts normally when the catalogue describes the component', () => {
+		const {plugins, dialogs} = boot([sycomponentSource]);
+		const editor = strictEditor({metadata: METADATA});
+		plugins.sycomponent.init(editor);
+
+		const container = document.createElement('div');
+		const dialog = dialogLike(container);
+		const definition = dialogs.sycomponent(editor);
+		definition.onShow.call(dialog);
+		definition.onOk.call(dialog);
+
+		expect(alertSpy).not.toHaveBeenCalled();
+		expect(editor.inserted).toHaveLength(1);
+		expect(editor.inserted[0]).toContain('data-sycomponent="A\\B"');
 	});
 });
 

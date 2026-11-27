@@ -10,6 +10,11 @@
  * carries the human label, the generated slot and the constructor parameters,
  * so the dialog can render typed fields instead of a raw JSON textarea.
  *
+ * `config.components.strict` (off by default) turns every silent fallback into
+ * a visible error: an undescribed component can no longer be inserted through
+ * the JSON textarea, and a failed preview shows the failure instead of the
+ * `(save to render)` mask.
+ *
  * `config.components.metadataUrl` is the same catalogue served by
  * `editor/<item>/metadata`: when the consumer provides it, the plugin fetches
  * it the first time the dialog is opened instead of receiving it with every
@@ -92,7 +97,10 @@
 		rendering: '(rendering…)',
 		saveToRender: '(save to render)',
 		componentFallback: 'Component',
-		componentNotAllowed: 'This component is no longer available.'
+		componentNotAllowed: 'This component is no longer available.',
+		strictUnknown: 'Unknown component: "%component%" is not in the allowed list.',
+		strictCatalogue: 'The component list could not be loaded: the editor cannot insert a component.',
+		renderUnavailable: '(preview unavailable)'
 	};
 
 	function message(editor, key, params) {
@@ -124,6 +132,31 @@
 		var metadata = configuredComponents(editor).metadata;
 		return !!metadata && typeof metadata === 'object' && !Array.isArray(metadata)
 			&& Object.keys(metadata).length > 0;
+	}
+
+	/** Opt-in: a fallback that hides a failure is worse than a visible error. */
+	function strictMode(editor) {
+		return configuredComponents(editor).strict === true;
+	}
+
+	/**
+	 * Message of a strict refusal: no description at all means the catalogue
+	 * never arrived, which is a different problem from an unknown class.
+	 */
+	function strictError(editor, component) {
+		var described = Object.keys(metadataMap(editor)).length > 0;
+		return message(editor, described ? 'strictUnknown' : 'strictCatalogue', {component: component});
+	}
+
+	/** Visible error block, used instead of the JSON textarea in strict mode. */
+	function strictPanel(editor, component) {
+		var panel = document.createElement('p');
+		panel.className = 'sycomponent-error';
+		panel.setAttribute('data-sycomponent-error', '1');
+		panel.style.margin = '0';
+		panel.style.color = '#b02a37';
+		panel.textContent = strictError(editor, component);
+		return panel;
 	}
 
 	function metadataEndpoint(editor) {
@@ -388,6 +421,11 @@
 		var params = parameters(editor, component);
 
 		if (params === null) {
+			if (strictMode(editor)) {
+				container.appendChild(strictPanel(editor, component));
+				return;
+			}
+
 			var note = document.createElement('p');
 			note.textContent = message(editor, 'argumentsJson');
 			note.style.margin = '0 0 4px';
@@ -542,6 +580,15 @@
 	 * replace the widget content. The source slot stays untouched: it is what
 	 * the next save serializes.
 	 */
+	/**
+	 * `(save to render)` in the default mode: a component that is only rendered
+	 * on the next page load is expected. In strict mode the mask says the
+	 * preview failed, so a broken endpoint cannot look like a normal state.
+	 */
+	function restoreMask(editor, widget) {
+		maskWidget(editor, widget, strictMode(editor) ? 'renderUnavailable' : undefined);
+	}
+
 	function refreshComponent(editor, widget) {
 		if (!widget || !widget.element) return;
 
@@ -550,7 +597,7 @@
 		var args = widget.element.getAttribute('data-sycomponent-args') || '{}';
 
 		if (!url) {
-			maskWidget(editor, widget);
+			restoreMask(editor, widget);
 			return;
 		}
 
@@ -571,7 +618,7 @@
 			return response.json();
 		}).then(function (data) {
 			if (!data || data.status !== 'ok' || typeof data.html !== 'string') {
-				maskWidget(editor, widget);
+				restoreMask(editor, widget);
 				return;
 			}
 			var preview = fixPreviewActions(data.html);
@@ -579,7 +626,7 @@
 			rendered[key] = preview;
 			widget.element.$.innerHTML = preview;
 		}).catch(function () {
-			maskWidget(editor, widget);
+			restoreMask(editor, widget);
 		});
 	}
 
@@ -813,6 +860,11 @@
 				var component = this.getValueOf('info', 'component');
 				if (!component) {
 					alert(message(editor, 'chooseComponent'));
+					return false;
+				}
+
+				if (strictMode(editor) && !componentMeta(editor, component)) {
+					alert(strictError(editor, component));
 					return false;
 				}
 

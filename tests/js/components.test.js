@@ -118,7 +118,8 @@ describe('components', () => {
 		await flush();
 
 		expect(element.innerHTML).toContain('{SLOT}');
-		expect(window.CKEDITOR.__calls[0].config.components).toEqual({enabled: true, allowlist: ['A']});
+		// `strict` is part of the contract now: off unless the consumer opts in.
+		expect(window.CKEDITOR.__calls[0].config.components).toEqual({enabled: true, allowlist: ['A'], strict: false});
 		expect(window.CKEDITOR.__calls[0].config.syComponentSlots).toEqual({'A\n{}': '{SLOT}'});
 		expect(window.CKEDITOR.__calls[0].config.syRenderedComponents).toEqual({'A\n{}': '<span>rendered</span>'});
 	});

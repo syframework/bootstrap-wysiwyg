@@ -21,7 +21,10 @@ CKEDITOR.plugins.setLang('sycomponent', 'fr', {
 	rendering: '(rendu en cours…)',
 	saveToRender: '(enregistrer pour rendre)',
 	componentFallback: 'Composant',
-	componentNotAllowed: "Ce composant n’est plus disponible."
+	componentNotAllowed: "Ce composant n’est plus disponible.",
+	strictUnknown: "Composant inconnu : « %component% » n’est pas dans la liste autorisée.",
+	strictCatalogue: "La liste des composants n’a pas pu être chargée : l’éditeur ne peut pas insérer de composant.",
+	renderUnavailable: "(aperçu indisponible)"
 });
 
 CKEDITOR.plugins.setLang('sytranslate', 'fr', {

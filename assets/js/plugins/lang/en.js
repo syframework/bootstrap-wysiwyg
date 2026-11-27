@@ -21,7 +21,10 @@ CKEDITOR.plugins.setLang('sycomponent', 'en', {
 	rendering: '(rendering…)',
 	saveToRender: '(save to render)',
 	componentFallback: 'Component',
-	componentNotAllowed: 'This component is no longer available.'
+	componentNotAllowed: 'This component is no longer available.',
+	strictUnknown: 'Unknown component: "%component%" is not in the allowed list.',
+	strictCatalogue: 'The component list could not be loaded: the editor cannot insert a component.',
+	renderUnavailable: '(preview unavailable)'
 });
 
 CKEDITOR.plugins.setLang('sytranslate', 'en', {

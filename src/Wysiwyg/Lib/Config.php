@@ -395,6 +395,7 @@ class Config {
 			'allowlist'   => $allowlist,
 			'renderUrl'   => self::nullableString($raw, 'components.render-url'),
 			'metadataUrl' => self::nullableString($raw, 'components.metadata-url'),
+			'strict'      => self::bool($raw, 'components.strict', false),
 		];
 
 		// A consumer serving `editor/<item>/metadata` gets the catalogue from the
