@@ -1,9 +1,6 @@
 <?php
 namespace Sy\Bootstrap\Application\Editor;
 
-use Sy\Bootstrap\Lib\Str;
-use Sy\Bootstrap\Wysiwyg\Lib\ComponentFilter;
-
 /**
  * Shared `editor/<item>/render` endpoint.
  *
@@ -30,6 +27,8 @@ use Sy\Bootstrap\Wysiwyg\Lib\ComponentFilter;
  * calls before this action.
  */
 trait Render {
+
+	use EditorAllowlist;
 
 	/**
 	 * Render one allowlisted component for the editor preview.
@@ -67,37 +66,6 @@ trait Render {
 		}
 
 		return $this->ok(['status' => 'ok', 'html' => $html]);
-	}
-
-	/**
-	 * Resolved allowlist: the project entries merged with the consumer default.
-	 *
-	 * @return string[]
-	 */
-	protected function renderAllowlist(): array {
-		return ComponentFilter::allowlist($this->renderEditorKey(), $this->renderDefaultAllowlist());
-	}
-
-	/**
-	 * Editor key used by `WYSIWYG_COMPONENT_ALLOWLIST`, derived from the action
-	 * like `CkFile::requestItem()` does for the upload directory: `Article` ->
-	 * `article`, `ContentTranslation` -> `content_translation`.
-	 *
-	 * @return string
-	 */
-	protected function renderEditorKey(): string {
-		return str_replace('_', '-', Str::camlToSnake(is_string($this->action) ? $this->action : ''));
-	}
-
-	/**
-	 * Consumer default allowlist, read from `COMPONENT_ALLOWLIST` when the class
-	 * declares it (empty otherwise: the filter is then disabled, C98).
-	 *
-	 * @return string[]
-	 */
-	protected function renderDefaultAllowlist(): array {
-		$constant = static::class . '::COMPONENT_ALLOWLIST';
-		return defined($constant) ? (array) constant($constant) : [];
 	}
 
 	/**

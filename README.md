@@ -225,6 +225,19 @@ trait, so a consumer only declares its language and translator directories
 share the same implementation. Without a render URL, the
 widget keeps the `(save to render)` mask until the next page load.
 
+`Sy\Bootstrap\Wysiwyg\Lib\ComponentRegistry::describe($editor, $allowlist)`
+returns the same map as a payload — `{editor, ts, components}` — for a future
+on-demand transfer: `ts` is the last modification time of the described classes
+plus the metadata algorithm itself, so it only moves when the description
+really changes. The engine ships the endpoint as the
+`Sy\Bootstrap\Application\Editor\Metadata` trait; it reuses the same
+`EditorAllowlist` hooks as `Render` (`renderAllowlist()`,
+`renderEditorKey()`, `renderDefaultAllowlist()`), so the render and metadata
+endpoints of a consumer can never diverge, and it answers `304` to a
+revalidating `If-None-Match` instead of resending the catalogue. A project can
+still read `components.metadata` (the embedded map) until the browser side
+consumes the URL.
+
 An existing component is edited with a double-click or the **Edit component**
 context-menu entry. The dialog is prefilled from the current
 `data-sycomponent` / `data-sycomponent-args` attributes, and the widget is
