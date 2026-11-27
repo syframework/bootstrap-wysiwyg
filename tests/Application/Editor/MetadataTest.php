@@ -190,6 +190,41 @@ class MetadataTest extends TestCase {
 		$this->assertNotSame($first, $empty->etag($bare));
 	}
 
+	/**
+	 * The tag describes the catalogue, not the clock: `ts` only tells when the
+	 * described files were last written.
+	 */
+	public function testEtagIgnoresTheTimestamp() {
+		$endpoint = new MetadataEndpoint();
+
+		$payload = ['editor' => 'article', 'ts' => 100, 'components' => ['A\\B' => ['label' => 'A B']]];
+		$same    = $payload;
+		$same['ts'] = 200;
+		$changed = $payload;
+		$changed['components']['A\\B']['label'] = 'A C';
+
+		$this->assertSame(
+			$endpoint->etag($payload),
+			$endpoint->etag($same),
+			'a redeploy that only touches mtimes must not invalidate every client'
+		);
+		$this->assertNotSame(
+			$endpoint->etag($payload),
+			$endpoint->etag($changed),
+			'a changed description must invalidate the tag, even with the same mtime'
+		);
+	}
+
+	public function testPayloadStillCarriesTheTimestamp() {
+		$endpoint = new MetadataEndpoint();
+		$endpoint->metadataAction();
+
+		// Informational, out of the validator.
+		$this->assertArrayHasKey('ts', $endpoint->data);
+		$this->assertIsInt($endpoint->data['ts']);
+		$this->assertGreaterThan(0, $endpoint->data['ts']);
+	}
+
 	public function testConditionalRequestAnswers304() {
 		$endpoint = new MetadataEndpoint();
 		$endpoint->metadataAction();

@@ -24,9 +24,9 @@ use Sy\Bootstrap\Wysiwyg\Lib\ComponentRegistry;
  * and `editor/<item>/render` already allow, and it never reflects on a class
  * the project did not declare.
  *
- * The response carries an `ETag` derived from the payload, so a browser
- * revalidating with `If-None-Match` gets a `304` and keeps its copy instead of
- * downloading the map again.
+ * The response carries an `ETag` derived from the catalogue itself (never from
+ * `ts`), so a browser revalidating with `If-None-Match` gets a `304` and keeps
+ * its copy instead of downloading the map again.
  *
  * The same-origin check is done by `Application\Editor::dispatch()` and the
  * business rule by the consumer's own `security()`.
@@ -52,16 +52,23 @@ trait Metadata {
 	}
 
 	/**
-	 * Cache validator of the payload.
+	 * Cache validator of the catalogue.
 	 *
-	 * It changes exactly when the payload changes: the same allowlist served by
-	 * the same code always produces the same tag.
+	 * It is derived from the description only, never from `ts`: a redeploy that
+	 * merely touches mtimes (`rsync -a`, a rebuilt image) must not invalidate
+	 * every client cache, and a deployment that *preserves* mtimes while
+	 * changing a class must not leave clients on a stale catalogue. `ts` stays
+	 * in the payload as information, out of the validator.
 	 *
 	 * @param array $payload
 	 * @return string
 	 */
 	protected function metadataEtag(array $payload): string {
-		return '"' . sha1((string) json_encode($payload)) . '"';
+		$described = [
+			'editor'     => $payload['editor'] ?? null,
+			'components' => $payload['components'] ?? [],
+		];
+		return '"' . sha1((string) json_encode($described)) . '"';
 	}
 
 	/**

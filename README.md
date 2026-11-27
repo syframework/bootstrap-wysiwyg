@@ -237,13 +237,16 @@ widget keeps the `(save to render)` mask until the next page load.
 `Sy\Bootstrap\Wysiwyg\Lib\ComponentRegistry::describe($editor, $allowlist)`
 returns the same map as a payload — `{editor, ts, components}` — so the
 catalogue can travel on demand: `ts` is the last modification time of the
-described classes plus the metadata algorithm itself, so it only moves when the
-description really changes. The engine ships the endpoint as the
-`Sy\Bootstrap\Application\Editor\Metadata` trait; it reuses the same
-`EditorAllowlist` hooks as `Render` (`renderAllowlist()`, `renderEditorKey()`,
-`renderDefaultAllowlist()`), so the render and metadata endpoints of a consumer
-can never diverge, and it answers `304` to a revalidating `If-None-Match`
-instead of resending the catalogue.
+described classes plus the metadata algorithm itself, kept as information. The
+engine ships the endpoint as the `Sy\Bootstrap\Application\Editor\Metadata`
+trait; it reuses the same `EditorAllowlist` hooks as `Render`
+(`renderAllowlist()`, `renderEditorKey()`, `renderDefaultAllowlist()`), so the
+render and metadata endpoints of a consumer can never diverge, and it answers
+`304` to a revalidating `If-None-Match` instead of resending the catalogue. The
+`ETag` is derived from `{editor, components}` and never from `ts`: a validator
+must describe the catalogue, not the clock — a redeploy that only touches mtimes
+would otherwise bust every client cache, and a deployment that preserves mtimes
+while changing a class would leave clients on a stale catalogue.
 
 A consumer that serves that route declares it as `components.metadata-url`
 (e.g. `/editor/article/metadata`) on the editor instance. The embedded

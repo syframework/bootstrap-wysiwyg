@@ -506,6 +506,8 @@
 				alert(message(editor, 'invalidJsonShape'));
 				return null;
 			}
+			// Same rule as Sy\Bootstrap\Wysiwyg\Lib\ComponentArgs::NAME_PATTERN:
+			// an argument is named after a constructor parameter.
 			var invalidKey = null;
 			Object.keys(parsed).forEach(function (key) {
 				if (invalidKey === null && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) invalidKey = key;

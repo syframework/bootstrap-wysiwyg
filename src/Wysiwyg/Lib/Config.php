@@ -398,8 +398,11 @@ class Config {
 			'strict'      => self::bool($raw, 'components.strict', false),
 		];
 
-		// A consumer serving `editor/<item>/metadata` gets the catalogue from the
-		// endpoint, on demand: the payload is not embedded in every page.
+		// Two transports, one description: this embedded map and the
+		// `ComponentRegistry` payload served by `editor/<item>/metadata` both
+		// delegate to `ComponentMeta`, so they cannot disagree. A consumer
+		// serving the endpoint gets the catalogue on demand instead, and the
+		// payload is not embedded in every page.
 		if ($components['enabled'] and $components['metadataUrl'] === null) {
 			$metadata = ComponentMeta::describe($allowlist);
 			if ($metadata !== []) $components['metadata'] = $metadata;

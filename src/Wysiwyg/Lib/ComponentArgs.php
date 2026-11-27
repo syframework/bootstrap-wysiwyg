@@ -20,7 +20,13 @@ namespace Sy\Bootstrap\Wysiwyg\Lib;
  */
 class ComponentArgs {
 
-	/** A named argument is a PHP parameter name. */
+	/**
+	 * A named argument is a PHP parameter name.
+	 *
+	 * The dialog applies the same rule to its JSON textarea
+	 * (`assets/js/plugins/sycomponent.js`): a change here must be mirrored
+	 * there, and the client check is a courtesy — this one is the guard.
+	 */
 	const NAME_PATTERN = '/^[A-Za-z_][A-Za-z0-9_]*$/';
 
 	/**
